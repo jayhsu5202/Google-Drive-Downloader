@@ -4,7 +4,7 @@ export interface DownloadTask {
   id: string;
   url: string;
   outputDir: string;
-  status: 'pending' | 'downloading' | 'completed' | 'error';
+  status: 'pending' | 'downloading' | 'completed' | 'error' | 'cancelled';
   progress: number;
   currentFile: string;
   createdAt: number;

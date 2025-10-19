@@ -233,6 +233,20 @@ router.post('/cancel', (_req: Request, res: Response) => {
     gdownService.cancel();
     gdownService = null;
 
+    // Update all downloading tasks to cancelled
+    const allTasks = taskManager.getAllTasks();
+    for (const task of allTasks) {
+      if (task.status === 'downloading') {
+        taskManager.updateTask(task.id, {
+          status: 'cancelled',
+          error: 'Download cancelled by user'
+        });
+      }
+    }
+
+    // Reset queue processing flag
+    isProcessingQueue = false;
+
     progressClients.forEach(client => {
       client.write(`data: ${JSON.stringify({ status: 'cancelled' })}\n\n`);
     });
@@ -258,10 +272,10 @@ router.post('/restart', (_req: Request, res: Response) => {
     // Get all tasks
     const allTasks = taskManager.getAllTasks();
 
-    // Reset error tasks to pending
+    // Reset error/cancelled tasks to pending
     let restartedCount = 0;
     for (const task of allTasks) {
-      if (task.status === 'error' || task.status === 'downloading') {
+      if (task.status === 'error' || task.status === 'downloading' || task.status === 'cancelled') {
         taskManager.updateTask(task.id, {
           status: 'pending',
           error: undefined
