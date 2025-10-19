@@ -231,7 +231,7 @@ router.post('/cancel', (_req: Request, res: Response) => {
   // Cancel all active downloads
   if (activeServices.size > 0) {
     activeServices.forEach((service, taskId) => {
-      service.cancel();
+      service.cancel();  // This will also call removeAllListeners() internally
       console.log(`Cancelled task: ${taskId}`);
     });
     activeServices.clear();
@@ -494,6 +494,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
       // Remove from active services
       activeServices.delete(task.id);
 
+      // Clean up event listeners to prevent memory leaks
+      taskGdownService.removeAllListeners();
+
       console.log(`[downloadTask] Task ${task.id} removed from active services`);
 
       resolve();
@@ -526,6 +529,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
 
       // Remove from active services
       activeServices.delete(task.id);
+
+      // Clean up event listeners to prevent memory leaks
+      taskGdownService.removeAllListeners();
 
       resolve();
     });

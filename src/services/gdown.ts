@@ -371,6 +371,7 @@ export class GdownService extends EventEmitter {
       this.process = null;
     }
     this.currentProgress = null;  // Clear progress
+    this.removeAllListeners();    // Clean up event listeners to prevent memory leaks
   }
 }
 
