@@ -211,6 +211,8 @@ function connectToProgressStream() {
       progressSection.style.display = 'block';
     } else if (data.type === 'progress') {
       updateProgress(data.progress);
+    } else if (data.type === 'warning') {
+      handleDownloadWarning(data);
     } else if (data.type === 'task_complete') {
       handleDownloadComplete(data);
     } else if (data.type === 'task_error') {
@@ -259,6 +261,7 @@ function updateProgress(data) {
   console.log('Updating progress:', { current, total, file, percentage });
 
   progressStatus.textContent = '下載中...';
+  progressStatus.style.color = ''; // Reset color to default
   progressPercentage.textContent = `${percentage}%`;
   progressFill.style.width = `${percentage}%`;
   currentFile.textContent = file || '準備中...';
@@ -327,7 +330,26 @@ async function checkIfAllTasksComplete() {
 }
 
 /**
- * Handle download error
+ * Handle download warning (non-fatal errors)
+ */
+function handleDownloadWarning(data) {
+  console.warn('Download warning:', data);
+
+  const warning = data.warning || '未知警告';
+  const cleanWarning = warning.replace(/^(QUOTA_EXCEEDED|PERMISSION_DENIED):/, '');
+
+  // Show warning but don't stop download
+  progressStatus.textContent = `⚠️ ${cleanWarning}`;
+  progressStatus.style.color = '#ff9800'; // Orange color for warning
+
+  // Show alert for important warnings
+  if (warning.includes('QUOTA_EXCEEDED')) {
+    alert(`⚠️ ${cleanWarning}\n\n請切換到「Cookie 管理」頁面更新 Cookie，然後下載會自動繼續。`);
+  }
+}
+
+/**
+ * Handle download error (fatal errors)
  */
 function handleDownloadError(data) {
   console.error('Download error:', data);
@@ -337,12 +359,14 @@ function handleDownloadError(data) {
 
   // For batch downloads, show error but don't stop
   if (data.taskId) {
-    progressStatus.textContent = `⚠️ 任務失敗：${cleanError}`;
+    progressStatus.textContent = `❌ 任務失敗：${cleanError}`;
+    progressStatus.style.color = '#f44336'; // Red color for error
     // Don't disconnect - other tasks may still be downloading
     // Don't reset UI - keep showing progress
   } else {
     // Single download error
     progressStatus.textContent = '❌ 下載失敗';
+    progressStatus.style.color = '#f44336'; // Red color for error
     alert(`下載錯誤：${cleanError}`);
     disconnectProgressStream();
     resetUI();

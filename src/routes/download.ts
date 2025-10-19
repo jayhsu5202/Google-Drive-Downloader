@@ -110,12 +110,22 @@ router.post('/start', (req: Request, res: Response) => {
       });
     });
 
-    // Listen to errors
+    // Listen to warnings (non-fatal errors like QUOTA_EXCEEDED)
+    gdownService.on('warning', (warning: string) => {
+      progressClients.forEach(client => {
+        client.write(`data: ${JSON.stringify({
+          type: 'warning',
+          warning
+        })}\n\n`);
+      });
+    });
+
+    // Listen to errors (fatal errors)
     gdownService.on('error', (error: string) => {
       progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({ 
-          status: 'error', 
-          error 
+        client.write(`data: ${JSON.stringify({
+          status: 'error',
+          error
         })}\n\n`);
       });
     });
@@ -366,7 +376,20 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
       resolve();
     });
 
-    // Listen to errors
+    // Listen to warnings (non-fatal errors like QUOTA_EXCEEDED)
+    gdownService.on('warning', (warning: string) => {
+      // Don't update task status - just send warning to client
+      progressClients.forEach(client => {
+        client.write(`data: ${JSON.stringify({
+          type: 'warning',
+          taskId: task.id,
+          warning
+        })}\n\n`);
+      });
+      // Don't resolve - let the download continue
+    });
+
+    // Listen to errors (fatal errors)
     gdownService.on('error', (error: string) => {
       // Update task
       taskManager.updateTask(task.id, {

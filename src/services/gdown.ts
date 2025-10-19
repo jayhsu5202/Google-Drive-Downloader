@@ -206,14 +206,15 @@ export class GdownService extends EventEmitter {
         this.emit('progress', progress);
       }
 
-      // Check for quota/rate limit errors
+      // Check for quota/rate limit errors (emit as warning, not error)
+      // Don't stop the download - user might update cookies
       if (errorText.includes('Too many users have viewed or downloaded')) {
-        this.emit('error', 'QUOTA_EXCEEDED:Google Drive 流量限制：請建立副本或等待 24 小時後重試');
+        this.emit('warning', 'QUOTA_EXCEEDED:Google Drive 流量限制：請更新 Cookie 或等待 24 小時後重試');
       }
-      // Check for permission errors
+      // Check for permission errors (emit as warning, not error)
       else if (errorText.includes('Failed to retrieve file url') ||
                errorText.includes('Cannot retrieve the public link')) {
-        this.emit('error', 'PERMISSION_DENIED:無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」');
+        this.emit('warning', 'PERMISSION_DENIED:無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」');
       }
     });
 
