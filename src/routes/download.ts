@@ -44,8 +44,8 @@ router.post('/config', (req: Request, res: Response) => {
     const { maxConcurrent }: { maxConcurrent?: number } = req.body;
 
     if (maxConcurrent !== undefined) {
-      if (maxConcurrent < 1 || maxConcurrent > 5) {
-        res.status(400).json({ error: 'maxConcurrent must be between 1 and 5' });
+      if (maxConcurrent < 1 || maxConcurrent > 8) {
+        res.status(400).json({ error: 'maxConcurrent must be between 1 and 8' });
         return;
       }
       maxConcurrentDownloads = maxConcurrent;
