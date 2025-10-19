@@ -589,8 +589,11 @@ async function saveCookies() {
         }, 3000);
       }
 
-      // Auto-restart download if there's an active download
-      if (isDownloading && lastDownloadUrl) {
+      // Auto-restart download if there's an active download or error tasks
+      // Check if there are any tasks that can be restarted
+      const hasRestartableTasks = isDownloading || lastDownloadUrl;
+
+      if (hasRestartableTasks) {
         // Switch to download tab
         const downloadTab = document.querySelector('.tab[data-tab="download"]');
         if (downloadTab) {
