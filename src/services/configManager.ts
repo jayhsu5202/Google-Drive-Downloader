@@ -6,7 +6,7 @@ export interface AppConfig {
 
 const CONFIG_FILE = './config.json';
 const DEFAULT_CONFIG: AppConfig = {
-  maxConcurrentDownloads: 8
+  maxConcurrentDownloads: 1  // Match frontend default value
 };
 
 export class ConfigManager {
