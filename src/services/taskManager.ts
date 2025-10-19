@@ -117,6 +117,11 @@ export class TaskManager {
     if (task) {
       Object.assign(task, updates);
 
+      // Delete error field if it's explicitly set to undefined
+      if ('error' in updates && updates.error === undefined) {
+        delete task.error;
+      }
+
       // Only save to file if explicitly requested or if status changed
       if (saveToFile || updates.status !== undefined) {
         this.saveTasks();
