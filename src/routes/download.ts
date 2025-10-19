@@ -86,28 +86,11 @@ router.post('/batch', async (req: Request, res: Response) => {
       return;
     }
 
-    // Create tasks for all URLs, but skip if folder already exists with files
+    // Create tasks for all URLs
     const tasks: DownloadTask[] = [];
-    const skippedTasks: DownloadTask[] = [];
 
     for (const url of urls) {
       const task = taskManager.createTask(url, outputDir);
-
-      // Check if target folder already exists and has files
-      const targetDir = `${outputDir}/${task.id}`;
-      const fs = await import('fs');
-
-      if (fs.existsSync(targetDir)) {
-        const files = fs.readdirSync(targetDir);
-        if (files.length > 0) {
-          console.log(`Skipping task ${task.id}: folder already exists with ${files.length} files`);
-          skippedTasks.push(task);
-          // Remove task from memory since we're skipping it
-          taskManager.deleteTask(task.id);
-          continue;
-        }
-      }
-
       tasks.push(task);
       // Add task to queue
       downloadQueue.push(task.id);
@@ -120,9 +103,8 @@ router.post('/batch', async (req: Request, res: Response) => {
 
     res.json({
       status: 'started',
-      message: `Added ${tasks.length} tasks to queue, skipped ${skippedTasks.length} existing folders`,
-      tasks,
-      skippedTasks
+      message: `Added ${tasks.length} tasks to queue`,
+      tasks
     });
   } catch (error) {
     console.error('Error starting batch download:', error);
