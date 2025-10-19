@@ -14,6 +14,32 @@ const configManager = new ConfigManager();
 // Store progress for SSE clients
 const progressClients: Response[] = [];
 
+/**
+ * Safely broadcast message to all SSE clients
+ * Removes failed clients automatically
+ */
+function broadcastToClients(data: unknown): void {
+  const failedClients: Response[] = [];
+
+  progressClients.forEach(client => {
+    try {
+      client.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch (error) {
+      console.error('[SSE] Error writing to client:', error);
+      failedClients.push(client);
+    }
+  });
+
+  // Remove failed clients
+  failedClients.forEach(client => {
+    const index = progressClients.indexOf(client);
+    if (index !== -1) {
+      progressClients.splice(index, 1);
+      console.log('[SSE] Removed failed client');
+    }
+  });
+}
+
 // Download queue
 const downloadQueue: string[] = [];
 let isProcessingQueue = false;
@@ -228,9 +254,7 @@ router.post('/cancel', (_req: Request, res: Response) => {
     downloadQueue.length = 0;
     activeDownloads.clear();
 
-    progressClients.forEach(client => {
-      client.write(`data: ${JSON.stringify({ status: 'cancelled' })}\n\n`);
-    });
+    broadcastToClients({ status: 'cancelled' });
 
     res.json({ status: 'cancelled', message: 'Download cancelled' });
   } else {
@@ -391,11 +415,9 @@ async function processDownloadQueue(): Promise<void> {
         taskManager.updateTask(taskId, { status: 'downloading' });
 
         // Broadcast task start
-        progressClients.forEach(client => {
-          client.write(`data: ${JSON.stringify({
-            type: 'task_start',
-            task
-          })}\n\n`);
+        broadcastToClients({
+          type: 'task_start',
+          task
         });
 
         // Add to active downloads
@@ -443,12 +465,10 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
       }, false);
 
       // Broadcast to all SSE clients
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          type: 'progress',
-          taskId: task.id,
-          progress
-        })}\n\n`);
+      broadcastToClients({
+        type: 'progress',
+        taskId: task.id,
+        progress
       });
     });
 
@@ -465,12 +485,10 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
 
       console.log(`[downloadTask] Task ${task.id} status updated to completed`);
 
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          type: 'task_complete',
-          taskId: task.id,
-          outputDir: actualOutputDir
-        })}\n\n`);
+      broadcastToClients({
+        type: 'task_complete',
+        taskId: task.id,
+        outputDir: actualOutputDir
       });
 
       // Remove from active services
@@ -484,12 +502,10 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
     // Listen to warnings (non-fatal errors like QUOTA_EXCEEDED)
     taskGdownService.on('warning', (warning: string) => {
       // Don't update task status - just send warning to client
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          type: 'warning',
-          taskId: task.id,
-          warning
-        })}\n\n`);
+      broadcastToClients({
+        type: 'warning',
+        taskId: task.id,
+        warning
       });
       // Don't resolve - let the download continue
     });
@@ -502,12 +518,10 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         error
       });
 
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          type: 'task_error',
-          taskId: task.id,
-          error
-        })}\n\n`);
+      broadcastToClients({
+        type: 'task_error',
+        taskId: task.id,
+        error
       });
 
       // Remove from active services
