@@ -35,7 +35,12 @@ export class GdownService extends EventEmitter {
       folderOutputDir,
       '--remaining-ok',
       '--continue'  // Enable resume for partially-downloaded files
-    ]);
+    ], {
+      env: {
+        ...process.env,
+        PYTHONIOENCODING: 'utf-8'  // Force UTF-8 encoding for Python output
+      }
+    });
 
     let currentFile = '';
     let current = 0;
@@ -47,7 +52,7 @@ export class GdownService extends EventEmitter {
 
     // Parse stdout for progress
     this.process.stdout?.on('data', (data: Buffer) => {
-      const output = data.toString();
+      const output = data.toString('utf8');
       console.log('[gdown stdout]', output);
 
       let hasUpdate = false;
@@ -172,7 +177,7 @@ export class GdownService extends EventEmitter {
     let errorBuffer = '';
 
     this.process.stderr?.on('data', (data: Buffer) => {
-      const errorText = data.toString();
+      const errorText = data.toString('utf8');
       console.error('[gdown error]', errorText);
 
       // Accumulate error messages
