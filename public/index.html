@@ -42,13 +42,28 @@
         </div>
         <div class="form-group">
           <label for="outputDir">輸出目錄（選填）</label>
-          <input 
-            type="text" 
-            id="outputDir" 
-            class="input" 
+          <input
+            type="text"
+            id="outputDir"
+            class="input"
             placeholder="./downloads"
             value="./downloads"
           >
+        </div>
+        <div class="form-group">
+          <label for="maxConcurrent">並發下載數量（1-5）</label>
+          <input
+            type="number"
+            id="maxConcurrent"
+            class="input"
+            placeholder="1"
+            value="1"
+            min="1"
+            max="5"
+          >
+          <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
+            ⚠️ 建議設定為 1-2，過高可能觸發 Google Drive 流量限制
+          </small>
         </div>
         <div class="button-group">
           <button id="startBtn" class="btn btn-primary">開始下載</button>
@@ -167,7 +182,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>Powered by gdown CLI | Made with ❤️ by Claude 4.0 Sonnet</p>
+      <p>Powered by gdown CLI</p>
     </footer>
   </div>
 

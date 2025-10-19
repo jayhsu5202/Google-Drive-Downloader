@@ -16,6 +16,8 @@ const progressClients: Response[] = [];
 // Download queue
 const downloadQueue: string[] = [];
 let isProcessingQueue = false;
+let maxConcurrentDownloads = 1; // Default: 1 (sequential)
+const activeDownloads = new Set<string>(); // Track active download task IDs
 
 // Auto-resume pending tasks on startup
 function autoResumeTasks(): void {
@@ -31,6 +33,45 @@ function autoResumeTasks(): void {
 
 // Start auto-resume after 2 seconds (allow server to fully start)
 setTimeout(autoResumeTasks, 2000);
+
+
+/**
+ * POST /api/download/config
+ * Set download configuration (e.g., max concurrent downloads)
+ */
+router.post('/config', (req: Request, res: Response) => {
+  try {
+    const { maxConcurrent }: { maxConcurrent?: number } = req.body;
+
+    if (maxConcurrent !== undefined) {
+      if (maxConcurrent < 1 || maxConcurrent > 5) {
+        res.status(400).json({ error: 'maxConcurrent must be between 1 and 5' });
+        return;
+      }
+      maxConcurrentDownloads = maxConcurrent;
+    }
+
+    res.json({
+      status: 'success',
+      config: {
+        maxConcurrentDownloads
+      }
+    });
+  } catch (error) {
+    console.error('Error setting config:', error);
+    res.status(500).json({ error: 'Failed to set config' });
+  }
+});
+
+/**
+ * GET /api/download/config
+ * Get current download configuration
+ */
+router.get('/config', (_req: Request, res: Response) => {
+  res.json({
+    maxConcurrentDownloads
+  });
+});
 
 /**
  * POST /api/download/batch
@@ -125,11 +166,11 @@ router.post('/start', (req: Request, res: Response) => {
     gdownService.on('complete', async () => {
       // Scan downloaded files
       const files = await scanDirectory(outputDir);
-      
+
       progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({ 
-          status: 'completed', 
-          files 
+        client.write(`data: ${JSON.stringify({
+          status: 'completed',
+          files
         })}\n\n`);
       });
     });
@@ -157,13 +198,13 @@ router.post('/start', (req: Request, res: Response) => {
     // Start download
     gdownService.downloadFolder(url, outputDir);
 
-    res.json({ 
-      status: 'started', 
-      message: 'Download started successfully' 
+    res.json({
+      status: 'started',
+      message: 'Download started successfully'
     });
   } catch (error) {
     console.error('Error starting download:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to start download',
       details: error instanceof Error ? error.message : String(error)
     });
@@ -344,7 +385,7 @@ router.get('/files', async (req: Request, res: Response) => {
     res.json({ files });
   } catch (error) {
     console.error('Error getting files:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to get files',
       details: error instanceof Error ? error.message : String(error)
     });
@@ -393,41 +434,54 @@ router.delete('/tasks/:id', (req: Request, res: Response) => {
 });
 
 /**
- * Process download queue
+ * Process download queue with concurrent downloads support
  */
 async function processDownloadQueue(): Promise<void> {
-  if (isProcessingQueue || downloadQueue.length === 0) {
+  if (isProcessingQueue) {
     return;
   }
 
   isProcessingQueue = true;
 
-  while (downloadQueue.length > 0) {
-    const taskId = downloadQueue.shift();
-    if (!taskId) continue;
+  while (downloadQueue.length > 0 || activeDownloads.size > 0) {
+    // Start new downloads if we have capacity
+    while (downloadQueue.length > 0 && activeDownloads.size < maxConcurrentDownloads) {
+      const taskId = downloadQueue.shift();
+      if (!taskId) continue;
 
-    const task = taskManager.getTask(taskId);
-    if (!task) continue;
+      const task = taskManager.getTask(taskId);
+      if (!task) continue;
 
-    // Skip completed tasks
-    if (task.status === 'completed') {
-      console.log(`Task ${taskId} already completed, skipping`);
-      continue;
+      // Skip completed tasks
+      if (task.status === 'completed') {
+        console.log(`Task ${taskId} already completed, skipping`);
+        continue;
+      }
+
+      // Update task status
+      taskManager.updateTask(taskId, { status: 'downloading' });
+
+      // Broadcast task start
+      progressClients.forEach(client => {
+        client.write(`data: ${JSON.stringify({
+          type: 'task_start',
+          task
+        })}\n\n`);
+      });
+
+      // Add to active downloads
+      activeDownloads.add(taskId);
+
+      // Download (don't await, let it run in parallel)
+      downloadTask(task).finally(() => {
+        activeDownloads.delete(taskId);
+      });
     }
 
-    // Update task status
-    taskManager.updateTask(taskId, { status: 'downloading' });
-
-    // Broadcast task start
-    progressClients.forEach(client => {
-      client.write(`data: ${JSON.stringify({
-        type: 'task_start',
-        task
-      })}\n\n`);
-    });
-
-    // Download
-    await downloadTask(task);
+    // Wait a bit before checking again
+    if (downloadQueue.length > 0 || activeDownloads.size > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
 
   isProcessingQueue = false;
@@ -438,19 +492,14 @@ async function processDownloadQueue(): Promise<void> {
  */
 function downloadTask(task: { id: string; url: string; outputDir: string }): Promise<void> {
   return new Promise((resolve) => {
-    // Cancel existing download if any
-    if (gdownService) {
-      gdownService.cancel();
-    }
-
-    // Create new gdown service
-    gdownService = new GdownService();
+    // Create new gdown service for this task (each task has its own service)
+    const taskGdownService = new GdownService();
 
     // Calculate actual output directory (includes folder ID subdirectory)
     const actualOutputDir = `${task.outputDir}/${task.id}`;
 
     // Listen to progress events
-    gdownService.on('progress', (progress: DownloadProgress) => {
+    taskGdownService.on('progress', (progress: DownloadProgress) => {
       // Update task (don't save to file for every progress update)
       taskManager.updateTask(task.id, {
         progress: progress.percentage,
@@ -468,7 +517,7 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
     });
 
     // Listen to completion
-    gdownService.on('complete', async () => {
+    taskGdownService.on('complete', async () => {
       // Scan downloaded files from the actual output directory
       const files = await scanDirectory(actualOutputDir);
 
@@ -488,14 +537,11 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         })}\n\n`);
       });
 
-      // Release gdown service to free resources
-      gdownService = null;
-
       resolve();
     });
 
     // Listen to warnings (non-fatal errors like QUOTA_EXCEEDED)
-    gdownService.on('warning', (warning: string) => {
+    taskGdownService.on('warning', (warning: string) => {
       // Don't update task status - just send warning to client
       progressClients.forEach(client => {
         client.write(`data: ${JSON.stringify({
@@ -508,7 +554,7 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
     });
 
     // Listen to errors (fatal errors)
-    gdownService.on('error', (error: string) => {
+    taskGdownService.on('error', (error: string) => {
       // Update task
       taskManager.updateTask(task.id, {
         status: 'error',
@@ -523,14 +569,11 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         })}\n\n`);
       });
 
-      // Release gdown service to free resources
-      gdownService = null;
-
       resolve();
     });
 
     // Start download
-    gdownService.downloadFolder(task.url, task.outputDir);
+    taskGdownService.downloadFolder(task.url, task.outputDir);
   });
 }
 

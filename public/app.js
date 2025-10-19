@@ -1,6 +1,7 @@
 // DOM Elements - Download Tab
 const driveUrlInput = document.getElementById('driveUrl');
 const outputDirInput = document.getElementById('outputDir');
+const maxConcurrentInput = document.getElementById('maxConcurrent');
 const startBtn = document.getElementById('startBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const restartBtn = document.getElementById('restartBtn');
@@ -157,13 +158,21 @@ async function startDownload() {
   lastOutputDir = outputDir;
 
   try {
+    // Set concurrent download config first
+    const maxConcurrent = parseInt(maxConcurrentInput.value) || 1;
+    await fetch('/api/download/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maxConcurrent })
+    });
+
     // Update UI
     isDownloading = true;
     startBtn.disabled = true;
     cancelBtn.disabled = false;
     restartBtn.disabled = false;
     progressSection.style.display = 'block';
-    progressStatus.textContent = `準備下載 ${urls.length} 個任務...`;
+    progressStatus.textContent = `準備下載 ${urls.length} 個任務（並發數：${maxConcurrent}）...`;
     progressPercentage.textContent = '0%';
     progressFill.style.width = '0%';
 
