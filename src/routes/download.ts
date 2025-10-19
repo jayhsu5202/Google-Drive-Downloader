@@ -275,7 +275,7 @@ router.post('/restart', (_req: Request, res: Response) => {
     // Get all tasks
     const allTasks = taskManager.getAllTasks();
 
-    // Reset error/cancelled tasks to pending
+    // Reset error/cancelled tasks to pending and add to queue
     let restartedCount = 0;
     for (const task of allTasks) {
       if (task.status === 'error' || task.status === 'downloading' || task.status === 'cancelled') {
@@ -284,6 +284,8 @@ router.post('/restart', (_req: Request, res: Response) => {
           error: undefined
           // Don't reset progress - preserve for resume download
         });
+        // Add task to download queue
+        downloadQueue.push(task.id);
         restartedCount++;
       }
     }
