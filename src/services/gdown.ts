@@ -220,7 +220,12 @@ export class GdownService extends EventEmitter {
 
     // Handle completion
     this.process.on('close', (code: number | null) => {
-      if (code === 0) {
+      // Check if all files were downloaded successfully
+      const allFilesDownloaded = total > 0 && current === total;
+
+      // If all files downloaded, treat as success even if exit code is non-zero
+      // (gdown might exit with error after downloading all files due to quota limits)
+      if (code === 0 || allFilesDownloaded) {
         const progress: DownloadProgress = {
           current: total,
           total,
@@ -230,6 +235,11 @@ export class GdownService extends EventEmitter {
         };
         this.emit('progress', progress);
         this.emit('complete');
+
+        // Log if completed despite non-zero exit code
+        if (code !== 0 && allFilesDownloaded) {
+          console.log(`[gdown] All files downloaded successfully despite exit code ${code}`);
+        }
       } else {
         const progress: DownloadProgress = {
           current,
