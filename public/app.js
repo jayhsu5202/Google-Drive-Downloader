@@ -147,9 +147,12 @@ function connectToProgressStream() {
     console.log('Progress update:', data);
 
     if (data.status === 'connected') {
-      progressStatus.textContent = '已連接，等待下載開始...';
+      // Don't show "waiting" message if we're resuming
+      // The backend will send task_start immediately if there's an active task
+      console.log('SSE connected');
     } else if (data.type === 'task_start') {
       progressStatus.textContent = `開始下載：${data.task.url}`;
+      progressSection.style.display = 'block';
     } else if (data.type === 'progress') {
       updateProgress(data.progress);
     } else if (data.type === 'task_complete') {

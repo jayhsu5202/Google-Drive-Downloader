@@ -152,6 +152,35 @@ router.get('/progress', (req: Request, res: Response) => {
   // Send initial connection message
   res.write(`data: ${JSON.stringify({ status: 'connected' })}\n\n`);
 
+  // If there are pending tasks, send current status
+  const pendingTasks = taskManager.getPendingTasks();
+  if (pendingTasks.length > 0) {
+    const currentTask = pendingTasks.find(t => t.status === 'downloading');
+    if (currentTask) {
+      // Send task start event
+      res.write(`data: ${JSON.stringify({
+        type: 'task_start',
+        taskId: currentTask.id,
+        task: currentTask
+      })}\n\n`);
+
+      // Send current progress if available
+      if (currentTask.progress !== undefined) {
+        res.write(`data: ${JSON.stringify({
+          type: 'progress',
+          taskId: currentTask.id,
+          progress: {
+            percentage: currentTask.progress,
+            current: 0,
+            total: 0,
+            currentFile: '',
+            status: 'downloading'
+          }
+        })}\n\n`);
+      }
+    }
+  }
+
   // Remove client on disconnect
   req.on('close', () => {
     const index = progressClients.indexOf(res);
