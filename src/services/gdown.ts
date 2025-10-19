@@ -106,9 +106,19 @@ export class GdownService extends EventEmitter {
     });
 
     // Handle errors
+    let errorBuffer = '';
     this.process.stderr?.on('data', (data: Buffer) => {
-      console.error('[gdown error]', data.toString());
-      this.emit('error', data.toString());
+      const errorText = data.toString();
+      console.error('[gdown error]', errorText);
+
+      // Accumulate error messages
+      errorBuffer += errorText;
+
+      // Check for critical errors that should stop the download
+      if (errorText.includes('Failed to retrieve file url') ||
+          errorText.includes('Cannot retrieve the public link')) {
+        this.emit('error', '無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」');
+      }
     });
 
     // Handle completion
@@ -132,7 +142,13 @@ export class GdownService extends EventEmitter {
           status: 'error'
         };
         this.emit('progress', progress);
-        this.emit('error', `Process exited with code ${code}`);
+
+        // Use accumulated error message if available
+        const errorMessage = errorBuffer.includes('Failed to retrieve')
+          ? '無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」'
+          : errorBuffer || `Process exited with code ${code}`;
+
+        this.emit('error', errorMessage);
       }
     });
   }
