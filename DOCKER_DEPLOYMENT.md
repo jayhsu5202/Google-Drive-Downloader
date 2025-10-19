@@ -264,5 +264,3 @@ docker-compose up -d
 
 ---
 
-Made with ❤️ by Claude 4.0 Sonnet
-

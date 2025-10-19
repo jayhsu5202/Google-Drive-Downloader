@@ -6,4 +6,4 @@ downloads/
 *.log
 .vscode/
 .idea/
-
+.tasks.json
