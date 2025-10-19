@@ -108,7 +108,8 @@ async function checkDownloadStatus() {
 
       // Update UI
       isDownloading = true;
-      startBtn.disabled = true;
+      // Don't disable start button - allow users to add more tasks anytime
+      // startBtn.disabled = true;
       cancelBtn.disabled = false;
       restartBtn.disabled = false;
       progressSection.style.display = 'block';
@@ -168,7 +169,8 @@ async function startDownload() {
 
     // Update UI
     isDownloading = true;
-    startBtn.disabled = true;
+    // Don't disable start button - allow users to add more tasks anytime
+    // startBtn.disabled = true;
     cancelBtn.disabled = false;
     restartBtn.disabled = false;
     progressSection.style.display = 'block';

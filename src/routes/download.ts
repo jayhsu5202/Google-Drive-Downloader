@@ -381,6 +381,12 @@ async function processDownloadQueue(): Promise<void> {
           continue;
         }
 
+        // Skip if already downloading (prevent duplicate downloads)
+        if (activeDownloads.has(taskId)) {
+          console.log(`Task ${taskId} already downloading, skipping`);
+          continue;
+        }
+
         // Update task status
         taskManager.updateTask(taskId, { status: 'downloading' });
 
