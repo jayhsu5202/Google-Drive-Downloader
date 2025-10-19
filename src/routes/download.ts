@@ -175,7 +175,31 @@ router.get('/progress', (req: Request, res: Response) => {
       })}\n\n`);
 
       // Send current progress if available
-      if (currentTask.progress !== undefined) {
+      if (gdownService) {
+        const currentProgress = gdownService.getCurrentProgress();
+        if (currentProgress) {
+          // Send full progress information from gdownService
+          res.write(`data: ${JSON.stringify({
+            type: 'progress',
+            taskId: currentTask.id,
+            progress: currentProgress
+          })}\n\n`);
+        } else if (currentTask.progress !== undefined) {
+          // Fallback to task progress if gdownService progress not available
+          res.write(`data: ${JSON.stringify({
+            type: 'progress',
+            taskId: currentTask.id,
+            progress: {
+              percentage: currentTask.progress,
+              current: 0,
+              total: 0,
+              currentFile: currentTask.currentFile || '',
+              status: 'downloading'
+            }
+          })}\n\n`);
+        }
+      } else if (currentTask.progress !== undefined) {
+        // Fallback if no gdownService
         res.write(`data: ${JSON.stringify({
           type: 'progress',
           taskId: currentTask.id,
@@ -183,7 +207,7 @@ router.get('/progress', (req: Request, res: Response) => {
             percentage: currentTask.progress,
             current: 0,
             total: 0,
-            currentFile: '',
+            currentFile: currentTask.currentFile || '',
             status: 'downloading'
           }
         })}\n\n`);

@@ -5,6 +5,15 @@ import type { DownloadProgress } from '../types.js';
 
 export class GdownService extends EventEmitter {
   private process: ChildProcess | null = null;
+  private currentProgress: DownloadProgress | null = null;
+
+  /**
+   * Get current download progress
+   * @returns Current progress or null if no download in progress
+   */
+  getCurrentProgress(): DownloadProgress | null {
+    return this.currentProgress;
+  }
 
   /**
    * Download a Google Drive folder using gdown CLI
@@ -143,6 +152,7 @@ export class GdownService extends EventEmitter {
           percentage,
           status
         };
+        this.currentProgress = progress;  // Save current progress
         this.emit('progress', progress);
       }
     });
@@ -219,6 +229,7 @@ export class GdownService extends EventEmitter {
           percentage,
           status
         };
+        this.currentProgress = progress;  // Save current progress
         this.emit('progress', progress);
       }
 
@@ -319,6 +330,7 @@ export class GdownService extends EventEmitter {
       this.process.kill();
       this.process = null;
     }
+    this.currentProgress = null;  // Clear progress
   }
 }
 
