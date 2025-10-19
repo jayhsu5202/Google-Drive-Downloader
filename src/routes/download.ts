@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { GdownService } from '../services/gdown.js';
 import { scanDirectory } from '../services/fileVerify.js';
-import { TaskManager } from '../services/taskManager.js';
+import { TaskManager, type DownloadTask } from '../services/taskManager.js';
 import type { DownloadRequest, DownloadProgress } from '../types.js';
 
 const router = Router();
@@ -45,19 +45,34 @@ router.post('/batch', (req: Request, res: Response) => {
       return;
     }
 
-    // Create tasks for all URLs
-    const tasks = urls.map(url => taskManager.createTask(url, outputDir));
+    // Create tasks for all URLs, but skip already completed tasks
+    const tasks: DownloadTask[] = [];
+    const skippedTasks: DownloadTask[] = [];
 
-    // Add tasks to queue
-    tasks.forEach(task => downloadQueue.push(task.id));
+    for (const url of urls) {
+      const task = taskManager.createTask(url, outputDir);
+
+      // Check if task already exists and is completed
+      if (task.status === 'completed') {
+        console.log(`Skipping already completed task: ${task.id}`);
+        skippedTasks.push(task);
+      } else {
+        tasks.push(task);
+        // Add task to queue
+        downloadQueue.push(task.id);
+      }
+    }
 
     // Start processing queue (don't await, let it run in background)
-    setTimeout(() => processDownloadQueue(), 500);
+    if (tasks.length > 0) {
+      setTimeout(() => processDownloadQueue(), 500);
+    }
 
     res.json({
       status: 'started',
-      message: `Added ${tasks.length} tasks to queue`,
-      tasks
+      message: `Added ${tasks.length} tasks to queue, skipped ${skippedTasks.length} completed tasks`,
+      tasks,
+      skippedTasks
     });
   } catch (error) {
     console.error('Error starting batch download:', error);
