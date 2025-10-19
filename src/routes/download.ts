@@ -276,6 +276,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
     // Create new gdown service
     gdownService = new GdownService();
 
+    // Calculate actual output directory (includes folder ID subdirectory)
+    const actualOutputDir = `${task.outputDir}/${task.id}`;
+
     // Listen to progress events
     gdownService.on('progress', (progress: DownloadProgress) => {
       // Update task
@@ -296,8 +299,8 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
 
     // Listen to completion
     gdownService.on('complete', async () => {
-      // Scan downloaded files
-      const files = await scanDirectory(task.outputDir);
+      // Scan downloaded files from the actual output directory
+      const files = await scanDirectory(actualOutputDir);
 
       // Update task
       taskManager.updateTask(task.id, {
@@ -310,6 +313,7 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         client.write(`data: ${JSON.stringify({
           type: 'task_complete',
           taskId: task.id,
+          outputDir: actualOutputDir,
           files
         })}\n\n`);
       });

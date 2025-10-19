@@ -19,15 +19,20 @@ export class GdownService extends EventEmitter {
 
     // Extract folder ID from URL if needed
     const folderId = this.extractFolderId(url);
-    
+
+    // Create a unique subfolder for this download using folder ID
+    // This prevents files from different folders mixing together
+    const folderOutputDir = `${outputDir}/${folderId}`;
+
     // Spawn gdown process (use python -m gdown for Windows compatibility)
+    // gdown will download files into the specified directory
     this.process = spawn('python', [
       '-m',
       'gdown',
       '--folder',
       folderId,
       '-O',
-      outputDir,
+      folderOutputDir,
       '--remaining-ok',
       '--continue'  // Enable resume for partially-downloaded files
     ]);
