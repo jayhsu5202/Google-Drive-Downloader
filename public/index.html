@@ -13,11 +13,21 @@
     <header class="header">
       <h1>🐾 Google Drive Downloader</h1>
       <p class="subtitle">使用 gdown 下載 Google Drive 資料夾，支援進度追蹤與檔案校驗</p>
-      <a href="/settings.html" class="settings-link">⚙️ 系統設定</a>
     </header>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+      <div class="tabs">
+        <button class="tab active" data-tab="download">📥 下載</button>
+        <button class="tab" data-tab="cookies">🍪 Cookie 管理</button>
+        <button class="tab" data-tab="system">⚙️ 系統設定</button>
+      </div>
+    </div>
 
     <!-- Main Content -->
     <main class="container">
+      <!-- Tab 1: Download -->
+      <div id="download" class="tab-content active">
       <!-- Download Form -->
       <section class="card">
         <h2>下載設定</h2>
@@ -71,6 +81,85 @@
           <p class="empty-message">尚無下載檔案</p>
         </div>
       </section>
+      </div>
+
+      <!-- Tab 2: Cookie Management -->
+      <div id="cookies" class="tab-content">
+        <section class="card">
+          <h2>🍪 Cookie 編輯器</h2>
+
+          <div class="cookie-info">
+            <strong>📌 如何解決 Google Drive 流量限制？</strong><br>
+            當遇到「Too many users have viewed or downloaded this file」錯誤時：
+            <ol style="margin: 0.5rem 0 0 1.5rem;">
+              <li>使用瀏覽器擴充功能（如 <strong>Get cookies.txt LOCALLY</strong>）匯出 cookies.txt</li>
+              <li>將內容貼到下方編輯器</li>
+              <li>點擊「儲存 Cookies」</li>
+              <li>重新下載即可使用您的 Google 帳號權限</li>
+            </ol>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <strong>Cookie 檔案路徑：</strong>
+            <span id="cookiePath" class="cookie-path">載入中...</span>
+          </div>
+
+          <textarea
+            id="cookieEditor"
+            class="cookie-editor"
+            placeholder="將 cookies.txt 內容貼到這裡...&#10;&#10;格式範例：&#10;# Netscape HTTP Cookie File&#10;.google.com	TRUE	/	TRUE	0	NID	xxx&#10;.google.com	TRUE	/	TRUE	0	SID	xxx"
+          ></textarea>
+
+          <div class="button-group">
+            <button id="saveCookiesBtn" class="btn btn-primary">
+              💾 儲存 Cookies
+            </button>
+            <button id="loadCookiesBtn" class="btn">
+              🔄 重新載入
+            </button>
+            <button id="clearCookiesBtn" class="btn btn-danger">
+              🗑️ 清除 Cookies
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Tab 3: System Settings -->
+      <div id="system" class="tab-content">
+        <section class="card">
+          <h2>⚙️ 環境狀態</h2>
+          <div class="status-item">
+            <span class="status-label">Python</span>
+            <div class="status-value">
+              <span id="pythonVersion">檢查中...</span>
+              <span id="pythonStatus" class="status-badge loading">檢查中</span>
+            </div>
+          </div>
+          <div class="status-item">
+            <span class="status-label">gdown</span>
+            <div class="status-value">
+              <span id="gdownVersion">檢查中...</span>
+              <span id="gdownStatus" class="status-badge loading">檢查中</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>安裝 gdown</h2>
+          <p style="color: #666; margin-bottom: 1rem;">
+            如果 gdown 未安裝，點擊下方按鈕自動安裝。
+          </p>
+          <div class="button-group">
+            <button id="installBtn" class="btn btn-primary" disabled>
+              安裝 gdown
+            </button>
+            <button id="refreshBtn" class="btn">
+              重新檢查
+            </button>
+          </div>
+          <div id="installOutput" class="install-output" style="display: none;"></div>
+        </section>
+      </div>
     </main>
 
     <!-- Footer -->
