@@ -51,8 +51,8 @@ router.post('/batch', (req: Request, res: Response) => {
     // Add tasks to queue
     tasks.forEach(task => downloadQueue.push(task.id));
 
-    // Start processing queue
-    processDownloadQueue();
+    // Start processing queue (don't await, let it run in background)
+    setTimeout(() => processDownloadQueue(), 500);
 
     res.json({
       status: 'started',

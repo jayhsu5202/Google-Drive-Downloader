@@ -35,32 +35,47 @@ export class GdownService extends EventEmitter {
     let currentFile = '';
     let current = 0;
     let total = 0;
+    let lastPercentage = -1;
 
     // Parse stdout for progress
     this.process.stdout?.on('data', (data: Buffer) => {
       const output = data.toString();
       console.log('[gdown stdout]', output);
 
+      let hasUpdate = false;
+
       // Parse different gdown output patterns
       // Pattern 1: "Downloading 3/10 files..."
       const progressMatch = output.match(/Downloading\s+(\d+)\/(\d+)/i);
       if (progressMatch) {
-        current = parseInt(progressMatch[1], 10);
-        total = parseInt(progressMatch[2], 10);
+        const newCurrent = parseInt(progressMatch[1], 10);
+        const newTotal = parseInt(progressMatch[2], 10);
+        if (newCurrent !== current || newTotal !== total) {
+          current = newCurrent;
+          total = newTotal;
+          hasUpdate = true;
+        }
       }
 
       // Pattern 2: "Downloading... <filename>"
       const fileMatch = output.match(/Downloading\.\.\.\s+(.+)/i);
       if (fileMatch) {
-        currentFile = fileMatch[1].trim();
-        current++;
+        const newFile = fileMatch[1].trim();
+        if (newFile !== currentFile) {
+          currentFile = newFile;
+          current++;
+          hasUpdate = true;
+        }
       }
 
       // Pattern 3: "From: <url>"
       const fromMatch = output.match(/From:\s+https:\/\/drive\.google\.com/i);
       if (fromMatch) {
         // File download started
-        if (total === 0) total = 1; // At least one file
+        if (total === 0) {
+          total = 1; // At least one file
+          hasUpdate = true;
+        }
       }
 
       // Pattern 4: Progress bar (e.g., "100%|████████| 1.23M/1.23M")
@@ -70,15 +85,19 @@ export class GdownService extends EventEmitter {
         console.log(`[gdown] File progress: ${fileProgress}%`);
       }
 
-      // Emit progress event
-      const progress: DownloadProgress = {
-        current,
-        total,
-        currentFile,
-        percentage: total > 0 ? Math.round((current / total) * 100) : 0,
-        status: 'downloading'
-      };
-      this.emit('progress', progress);
+      // Only emit if there's an update
+      const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+      if (hasUpdate || percentage !== lastPercentage) {
+        lastPercentage = percentage;
+        const progress: DownloadProgress = {
+          current,
+          total,
+          currentFile,
+          percentage,
+          status: 'downloading'
+        };
+        this.emit('progress', progress);
+      }
     });
 
     // Handle errors
