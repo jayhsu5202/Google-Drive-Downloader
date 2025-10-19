@@ -21,13 +21,13 @@
       <section class="card">
         <h2>下載設定</h2>
         <div class="form-group">
-          <label for="driveUrl">Google Drive 連結或資料夾 ID</label>
-          <input 
-            type="text" 
-            id="driveUrl" 
-            class="input" 
-            placeholder="https://drive.google.com/drive/folders/..."
-          >
+          <label for="driveUrl">Google Drive 連結或資料夾 ID（支援多行批量下載）</label>
+          <textarea
+            id="driveUrl"
+            class="input textarea"
+            rows="5"
+            placeholder="https://drive.google.com/drive/folders/...&#10;https://drive.google.com/drive/folders/...&#10;（每行一個連結）"
+          ></textarea>
         </div>
         <div class="form-group">
           <label for="outputDir">輸出目錄（選填）</label>

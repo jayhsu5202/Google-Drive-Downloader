@@ -28,7 +28,8 @@ export class GdownService extends EventEmitter {
       folderId,
       '-O',
       outputDir,
-      '--remaining-ok'
+      '--remaining-ok',
+      '--continue'  // Enable resume for partially-downloaded files
     ]);
 
     let currentFile = '';
@@ -38,19 +39,35 @@ export class GdownService extends EventEmitter {
     // Parse stdout for progress
     this.process.stdout?.on('data', (data: Buffer) => {
       const output = data.toString();
-      console.log('[gdown]', output);
+      console.log('[gdown stdout]', output);
 
-      // Parse progress: "Downloading 3/10 files..."
+      // Parse different gdown output patterns
+      // Pattern 1: "Downloading 3/10 files..."
       const progressMatch = output.match(/Downloading\s+(\d+)\/(\d+)/i);
       if (progressMatch) {
         current = parseInt(progressMatch[1], 10);
         total = parseInt(progressMatch[2], 10);
       }
 
-      // Parse current file name
-      const fileMatch = output.match(/Downloading\s+(.+?)\.{3}/i);
+      // Pattern 2: "Downloading... <filename>"
+      const fileMatch = output.match(/Downloading\.\.\.\s+(.+)/i);
       if (fileMatch) {
-        currentFile = fileMatch[1];
+        currentFile = fileMatch[1].trim();
+        current++;
+      }
+
+      // Pattern 3: "From: <url>"
+      const fromMatch = output.match(/From:\s+https:\/\/drive\.google\.com/i);
+      if (fromMatch) {
+        // File download started
+        if (total === 0) total = 1; // At least one file
+      }
+
+      // Pattern 4: Progress bar (e.g., "100%|████████| 1.23M/1.23M")
+      const barMatch = output.match(/(\d+)%\|/);
+      if (barMatch) {
+        const fileProgress = parseInt(barMatch[1], 10);
+        console.log(`[gdown] File progress: ${fileProgress}%`);
       }
 
       // Emit progress event

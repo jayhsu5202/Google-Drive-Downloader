@@ -82,11 +82,17 @@ body {
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.3s;
+  font-family: inherit;
 }
 
 .input:focus {
   outline: none;
   border-color: #667eea;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 120px;
 }
 
 /* Buttons */

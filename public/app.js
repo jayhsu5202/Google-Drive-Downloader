@@ -23,11 +23,22 @@ cancelBtn.addEventListener('click', cancelDownload);
  * Start download process
  */
 async function startDownload() {
-  const url = driveUrlInput.value.trim();
+  const urlsText = driveUrlInput.value.trim();
   const outputDir = outputDirInput.value.trim() || './downloads';
 
-  if (!url) {
+  if (!urlsText) {
     alert('請輸入 Google Drive 連結或資料夾 ID');
+    return;
+  }
+
+  // Parse multiple URLs (one per line)
+  const urls = urlsText
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  if (urls.length === 0) {
+    alert('請輸入至少一個有效的連結');
     return;
   }
 
@@ -37,15 +48,15 @@ async function startDownload() {
     startBtn.disabled = true;
     cancelBtn.disabled = false;
     progressSection.style.display = 'block';
-    progressStatus.textContent = '準備下載...';
+    progressStatus.textContent = `準備下載 ${urls.length} 個任務...`;
     progressPercentage.textContent = '0%';
     progressFill.style.width = '0%';
 
-    // Start download via API
-    const response = await fetch('/api/download/start', {
+    // Start batch download via API
+    const response = await fetch('/api/download/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, outputDir })
+      body: JSON.stringify({ urls, outputDir })
     });
 
     const data = await response.json();
@@ -100,6 +111,14 @@ function connectToProgressStream() {
 
     if (data.status === 'connected') {
       progressStatus.textContent = '已連接，等待下載開始...';
+    } else if (data.type === 'task_start') {
+      progressStatus.textContent = `開始下載：${data.task.url}`;
+    } else if (data.type === 'progress') {
+      updateProgress(data.progress);
+    } else if (data.type === 'task_complete') {
+      handleDownloadComplete(data);
+    } else if (data.type === 'task_error') {
+      handleDownloadError(data);
     } else if (data.status === 'downloading') {
       updateProgress(data);
     } else if (data.status === 'completed') {
