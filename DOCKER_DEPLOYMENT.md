@@ -24,8 +24,7 @@ docker-compose logs -f
 ### 3. 訪問應用
 
 開啟瀏覽器訪問：
-- 主頁面：http://localhost:3000
-- 設定頁面：http://localhost:3000/settings.html
+- 主頁面：http://localhost:3000（整合式 Tab 設計，包含下載、Cookie 管理、系統設定）
 
 ### 4. 停止容器
 
@@ -64,8 +63,12 @@ ports:
 2. **任務資料**：`./tasks.json:/app/tasks.json`
    - 持久化任務狀態（支援斷點續傳）
 
-3. **gdown Cookies**（選用）：`~/.cache/gdown:/root/.cache/gdown:ro`
+3. **配置資料**：`./config.json:/app/config.json`
+   - 持久化應用配置（如並發下載數量）
+
+4. **gdown Cookies**（選用）：`~/.cache/gdown:/root/.cache/gdown`
    - 用於 Google Drive 認證
+   - 應用會自動寫入 cookies，因此不應使用 `:ro` 唯讀模式
    - 如果不需要，可以移除此行
 
 ### 環境變數
