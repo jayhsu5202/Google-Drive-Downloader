@@ -27,16 +27,27 @@ export class TaskManager {
 
   /**
    * Load tasks from file
+   * Only load tasks that need to be resumed (pending, downloading, error)
+   * Ignore completed and cancelled tasks
    */
   private loadTasks(): void {
     try {
       if (fs.existsSync(TASKS_FILE)) {
         const data = fs.readFileSync(TASKS_FILE, 'utf-8');
         const tasksArray: DownloadTask[] = JSON.parse(data);
-        tasksArray.forEach(task => {
+
+        // Only load tasks that need to be resumed
+        const resumableTasks = tasksArray.filter(task =>
+          task.status === 'pending' ||
+          task.status === 'downloading' ||
+          task.status === 'error'
+        );
+
+        resumableTasks.forEach(task => {
           this.tasks.set(task.id, task);
         });
-        console.log(`Loaded ${this.tasks.size} tasks from file`);
+
+        console.log(`Loaded ${this.tasks.size} resumable tasks from file (filtered from ${tasksArray.length} total)`);
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -57,11 +68,19 @@ export class TaskManager {
 
   /**
    * Save tasks to file
+   * Only save tasks that need to be persisted (pending, downloading, error)
+   * Don't save completed or cancelled tasks
    */
   private saveTasks(): void {
     try {
-      const tasksArray = Array.from(this.tasks.values());
-      fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksArray, null, 2));
+      // Only save tasks that need to be persisted
+      const tasksToSave = Array.from(this.tasks.values()).filter(task =>
+        task.status === 'pending' ||
+        task.status === 'downloading' ||
+        task.status === 'error'
+      );
+
+      fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksToSave, null, 2));
     } catch (error) {
       console.error('Error saving tasks:', error);
     }
@@ -120,6 +139,15 @@ export class TaskManager {
       // Delete error field if it's explicitly set to undefined
       if ('error' in updates && updates.error === undefined) {
         delete task.error;
+      }
+
+      // Auto-cleanup: Remove completed or cancelled tasks from memory
+      // They won't be saved to file anyway, so no need to keep them in memory
+      if (task.status === 'completed' || task.status === 'cancelled') {
+        console.log(`Auto-removing ${task.status} task ${id} from memory`);
+        this.tasks.delete(id);
+        this.saveTasks(); // Save to update the file
+        return;
       }
 
       // Only save to file if explicitly requested or if status changed
