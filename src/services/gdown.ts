@@ -145,6 +145,16 @@ export class GdownService extends EventEmitter {
         }
       }
 
+      // Pattern 8: "Download completed" (all files skipped or downloaded)
+      if (output.includes('Download completed')) {
+        console.log('[gdown] Download completed detected, current:', current, 'total:', total);
+        // Ensure current matches total
+        if (total > 0 && current < total) {
+          current = total;
+          hasUpdate = true;
+        }
+      }
+
       // Calculate overall progress
       // Progress = (completed files + current file progress) / total files
       let percentage = 0;
