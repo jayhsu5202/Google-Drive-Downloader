@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Drive 流量限制解決方案</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .help-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .help-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .help-header h1 {
+      color: #1a73e8;
+      margin-bottom: 10px;
+    }
+
+    .help-section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .help-section h2 {
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #1a73e8;
+    }
+
+    .step {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-left: 4px solid #1a73e8;
+      border-radius: 4px;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background: #1a73e8;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    .step-content {
+      display: inline-block;
+      vertical-align: top;
+      width: calc(100% - 50px);
+    }
+
+    .code-block {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+    }
+
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+
+    .success {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+
+    .back-button {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #1a73e8;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+
+    .back-button:hover {
+      background: #1557b0;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="help-container">
+    <div class="help-header">
+      <h1>🚫 Google Drive 流量限制解決方案</h1>
+      <p>當遇到「Too many users have viewed or downloaded this file」錯誤時的解決方法</p>
+    </div>
+
+    <div class="help-section">
+      <h2>❓ 為什麼會出現這個錯誤？</h2>
+      <p>Google Drive 免費版對每個檔案設有每日下載次數限制。當太多人下載同一個檔案時，Google 會暫時限制存取，通常持續 24 小時。</p>
+      <div class="warning">
+        <strong>⚠️ 注意：</strong>這不是 IP 封鎖，而是針對特定檔案的流量限制。
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h2>✅ 解決方案 1：建立副本（推薦）</h2>
+      <p>這是最快速有效的方法，可以立即下載檔案。</p>
+
+      <div class="step">
+        <span class="step-number">1</span>
+        <div class="step-content">
+          <strong>修改下載連結</strong>
+          <p>將原始連結：</p>
+          <div class="code-block">https://drive.google.com/uc?export=download&id=FILE_ID</div>
+          <p>修改為：</p>
+          <div class="code-block">https://drive.google.com/open?id=FILE_ID</div>
+          <p>或將：</p>
+          <div class="code-block">https://drive.google.com/uc?id=FILE_ID</div>
+          <p>修改為：</p>
+          <div class="code-block">https://drive.google.com/open?id=FILE_ID</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">2</span>
+        <div class="step-content">
+          <strong>加入到我的雲端硬碟</strong>
+          <p>在瀏覽器中開啟修改後的連結，點擊右上角的 Google Drive 圖示，選擇「新增至我的雲端硬碟」。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        <div class="step-content">
+          <strong>建立副本</strong>
+          <p>前往「我的雲端硬碟」，找到剛才加入的檔案，右鍵點擊選擇「建立副本」。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">4</span>
+        <div class="step-content">
+          <strong>下載副本</strong>
+          <p>右鍵點擊副本檔案，選擇「下載」。由於你是副本的擁有者，不受流量限制。</p>
+        </div>
+      </div>
+
+      <div class="success">
+        <strong>✅ 完成！</strong>現在你可以無限制地下載副本檔案了。
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h2>⏰ 解決方案 2：等待 24 小時</h2>
+      <p>如果不急著下載，可以等待 24 小時後，流量限制會自動解除。</p>
+      <div class="warning">
+        <strong>⚠️ 注意：</strong>如果檔案非常熱門，可能需要更長時間才能恢復存取。
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h2>🍪 解決方案 3：使用 Cookies（進階）</h2>
+      <p>使用 Google 帳號登入並設定 cookies 可能繞過部分限制。</p>
+
+      <div class="step">
+        <span class="step-number">1</span>
+        <div class="step-content">
+          <strong>下載 cookies 檔案</strong>
+          <p>使用瀏覽器擴充套件（如 <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank">Get cookies.txt LOCALLY</a>）下載 cookies.txt。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">2</span>
+        <div class="step-content">
+          <strong>移動 cookies 檔案</strong>
+          <p>Windows：</p>
+          <div class="code-block">move cookies.txt %USERPROFILE%\.cache\gdown\cookies.txt</div>
+          <p>Linux/Mac：</p>
+          <div class="code-block">mv cookies.txt ~/.cache/gdown/cookies.txt</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        <div class="step-content">
+          <strong>重新下載</strong>
+          <p>gdown 會自動使用 cookies 進行驗證。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h2>💡 其他建議</h2>
+      <ul>
+        <li>如果經常遇到流量限制，考慮升級到 Google Workspace（付費版無限制）</li>
+        <li>對於大型檔案，建議使用其他雲端儲存服務（如 Dropbox、OneDrive）</li>
+        <li>如果你是檔案擁有者，可以建立副本並分享新連結給其他人</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center;">
+      <a href="/" class="back-button">← 返回下載頁面</a>
+    </div>
+  </div>
+</body>
+</html>
+

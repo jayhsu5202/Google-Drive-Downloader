@@ -114,10 +114,14 @@ export class GdownService extends EventEmitter {
       // Accumulate error messages
       errorBuffer += errorText;
 
-      // Check for critical errors that should stop the download
-      if (errorText.includes('Failed to retrieve file url') ||
-          errorText.includes('Cannot retrieve the public link')) {
-        this.emit('error', '無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」');
+      // Check for quota/rate limit errors
+      if (errorText.includes('Too many users have viewed or downloaded')) {
+        this.emit('error', 'QUOTA_EXCEEDED:Google Drive 流量限制：請建立副本或等待 24 小時後重試');
+      }
+      // Check for permission errors
+      else if (errorText.includes('Failed to retrieve file url') ||
+               errorText.includes('Cannot retrieve the public link')) {
+        this.emit('error', 'PERMISSION_DENIED:無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」');
       }
     });
 
@@ -143,10 +147,17 @@ export class GdownService extends EventEmitter {
         };
         this.emit('progress', progress);
 
-        // Use accumulated error message if available
-        const errorMessage = errorBuffer.includes('Failed to retrieve')
-          ? '無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」'
-          : errorBuffer || `Process exited with code ${code}`;
+        // Determine error type and message
+        let errorMessage = `Process exited with code ${code}`;
+
+        if (errorBuffer.includes('Too many users have viewed or downloaded')) {
+          errorMessage = 'QUOTA_EXCEEDED:Google Drive 流量限制：請建立副本或等待 24 小時後重試';
+        } else if (errorBuffer.includes('Failed to retrieve') ||
+                   errorBuffer.includes('Cannot retrieve the public link')) {
+          errorMessage = 'PERMISSION_DENIED:無法存取檔案：請檢查連結權限是否設為「知道連結的任何人」';
+        } else if (errorBuffer) {
+          errorMessage = errorBuffer;
+        }
 
         this.emit('error', errorMessage);
       }
