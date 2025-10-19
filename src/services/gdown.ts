@@ -259,6 +259,7 @@ export class GdownService extends EventEmitter {
       // Don't emit complete or error - just stop
       if (code === null) {
         console.log('[gdown] Process was cancelled');
+        this.process = null;  // Clean up process reference
         return;
       }
 
@@ -312,6 +313,10 @@ export class GdownService extends EventEmitter {
 
         this.emit('error', errorMessage);
       }
+
+      // Clean up process reference after completion or error
+      this.process = null;
+      console.log('[gdown] Process reference cleaned up');
     });
   }
 
