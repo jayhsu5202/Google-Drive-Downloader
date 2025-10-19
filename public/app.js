@@ -272,8 +272,6 @@ function connectToProgressStream() {
       handleDownloadComplete(data);
     } else if (data.type === 'task_error') {
       handleDownloadError(data);
-    } else if (data.status === 'downloading') {
-      updateProgress(data);
     } else if (data.status === 'completed') {
       handleDownloadComplete(data);
     } else if (data.status === 'error') {
@@ -281,6 +279,9 @@ function connectToProgressStream() {
     } else if (data.status === 'cancelled') {
       progressStatus.textContent = '下載已取消';
       resetUI();
+    } else if (data.status === 'downloading' || data.status === 'scanning') {
+      // Handle direct progress updates (for backward compatibility)
+      updateProgress(data);
     } else {
       // Regular progress update
       updateProgress(data);
@@ -311,16 +312,27 @@ function disconnectProgressStream() {
  * Update progress UI
  */
 function updateProgress(data) {
-  const { current = 0, total = 0, currentFile: file = '', percentage = 0 } = data;
+  const { current = 0, total = 0, currentFile: file = '', percentage = 0, status = 'downloading' } = data;
 
-  console.log('Updating progress:', { current, total, file, percentage });
+  console.log('Updating progress:', { current, total, file, percentage, status });
 
-  progressStatus.textContent = '下載中...';
-  progressStatus.style.color = ''; // Reset color to default
-  progressPercentage.textContent = `${percentage}%`;
-  progressFill.style.width = `${percentage}%`;
-  currentFile.textContent = file || '準備中...';
-  fileCount.textContent = total > 0 ? `${current} / ${total}` : '計算中...';
+  // Handle scanning status
+  if (status === 'scanning') {
+    progressStatus.textContent = `掃描中... 已發現 ${total} 個檔案`;
+    progressStatus.style.color = '#2196F3'; // Blue color for scanning
+    progressPercentage.textContent = '0%';
+    progressFill.style.width = '0%';
+    currentFile.textContent = file || '正在掃描資料夾...';
+    fileCount.textContent = `已發現 ${total} 個檔案`;
+  } else {
+    // Normal downloading status
+    progressStatus.textContent = '下載中...';
+    progressStatus.style.color = ''; // Reset color to default
+    progressPercentage.textContent = `${percentage}%`;
+    progressFill.style.width = `${percentage}%`;
+    currentFile.textContent = file || '準備中...';
+    fileCount.textContent = total > 0 ? `${current} / ${total}` : '計算中...';
+  }
 
   // Ensure progress section is visible
   progressSection.style.display = 'block';

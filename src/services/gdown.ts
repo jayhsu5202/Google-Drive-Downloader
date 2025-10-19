@@ -43,6 +43,7 @@ export class GdownService extends EventEmitter {
     let lastPercentage = -1;
     let fileList: string[] = [];
     let lastFileProgress = 0;
+    let scanningComplete = false;  // Track if directory scanning is complete
 
     // Parse stdout for progress
     this.process.stdout?.on('data', (data: Buffer) => {
@@ -103,6 +104,8 @@ export class GdownService extends EventEmitter {
       // Pattern 5: "Building directory structure completed"
       if (output.includes('Building directory structure completed')) {
         console.log('[gdown] Directory structure built, starting file processing');
+        scanningComplete = true;
+        hasUpdate = true;
       }
 
       // Pattern 6: "Processing file <id> <filename>"
@@ -129,13 +132,26 @@ export class GdownService extends EventEmitter {
 
 
       // Calculate overall progress
-      // Progress = (completed files + current file progress) / total files
       let percentage = 0;
-      if (total > 0) {
-        const completedProgress = current;
-        const currentFileProgressFraction = lastFileProgress / 100;
-        const overallProgress = (completedProgress + currentFileProgressFraction) / total;
-        percentage = Math.round(overallProgress * 100);
+      let status: 'scanning' | 'downloading' | 'completed' = 'downloading';
+
+      if (!scanningComplete) {
+        // Still scanning - don't calculate percentage yet
+        percentage = 0;
+        status = 'scanning';
+      } else if (total > 0) {
+        // Scanning complete - calculate progress
+        if (current === total) {
+          // All files completed
+          percentage = 100;
+        } else {
+          // Progress = (completed files + current file progress) / total files
+          // Limit current file progress to 0.99 to avoid showing 100% prematurely
+          const currentFileProgressFraction = Math.min(lastFileProgress / 100, 0.99);
+          const overallProgress = (current + currentFileProgressFraction) / total;
+          // Cap at 99% until all files are actually completed
+          percentage = Math.min(Math.round(overallProgress * 100), 99);
+        }
       }
 
       // Only emit if there's an update
@@ -146,7 +162,7 @@ export class GdownService extends EventEmitter {
           total,
           currentFile,
           percentage,
-          status: 'downloading'
+          status
         };
         this.emit('progress', progress);
       }

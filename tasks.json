@@ -1,0 +1,23 @@
+[
+  {
+    "id": "10j0UQ6Ub19Qme_XYwMgFg8g4N8mqcCWq",
+    "url": "https://drive.google.com/drive/folders/10j0UQ6Ub19Qme_XYwMgFg8g4N8mqcCWq?usp=sharing",
+    "outputDir": "./downloads",
+    "status": "completed",
+    "progress": 100,
+    "currentFile": "",
+    "createdAt": 1760874812137,
+    "error": "QUOTA_EXCEEDED:Google Drive 流量限制：請建立副本或等待 24 小時後重試",
+    "completedAt": 1760876790202
+  },
+  {
+    "id": "12hgNVAFQdN1SxCJskd8kVCbD_Rj95tbE",
+    "url": "https://drive.google.com/drive/folders/12hgNVAFQdN1SxCJskd8kVCbD_Rj95tbE?usp=sharing",
+    "outputDir": "./downloads",
+    "status": "completed",
+    "progress": 100,
+    "currentFile": "",
+    "createdAt": 1760876844647,
+    "completedAt": 1760878430180
+  }
+]

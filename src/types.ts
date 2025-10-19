@@ -5,7 +5,7 @@ export interface DownloadProgress {
   total: number;
   currentFile: string;
   percentage: number;
-  status: 'downloading' | 'completed' | 'error';
+  status: 'scanning' | 'downloading' | 'completed' | 'error';
 }
 
 export interface DownloadRequest {
