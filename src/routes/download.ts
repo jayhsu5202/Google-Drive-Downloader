@@ -17,6 +17,21 @@ const progressClients: Response[] = [];
 const downloadQueue: string[] = [];
 let isProcessingQueue = false;
 
+// Auto-resume pending tasks on startup
+function autoResumeTasks(): void {
+  const pendingTasks = taskManager.getPendingTasks();
+  if (pendingTasks.length > 0) {
+    console.log(`Found ${pendingTasks.length} pending tasks, resuming...`);
+    pendingTasks.forEach(task => {
+      downloadQueue.push(task.id);
+    });
+    processDownloadQueue();
+  }
+}
+
+// Start auto-resume after 2 seconds (allow server to fully start)
+setTimeout(autoResumeTasks, 2000);
+
 /**
  * POST /api/download/batch
  * Start batch downloading from multiple Google Drive URLs

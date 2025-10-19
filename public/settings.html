@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系統設定 - Google Drive Downloader</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ant-design@5.22.0/dist/reset.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .status-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .status-item:last-child {
+      border-bottom: none;
+    }
+
+    .status-label {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .status-value {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .status-badge.success {
+      background: #f6ffed;
+      color: #52c41a;
+      border: 1px solid #b7eb8f;
+    }
+
+    .status-badge.error {
+      background: #fff2f0;
+      color: #ff4d4f;
+      border: 1px solid #ffccc7;
+    }
+
+    .status-badge.loading {
+      background: #e6f7ff;
+      color: #1890ff;
+      border: 1px solid #91d5ff;
+    }
+
+    .install-section {
+      margin-top: 2rem;
+    }
+
+    .install-output {
+      background: #f5f5f5;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .nav-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .nav-link:hover {
+      color: #764ba2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>⚙️ 系統設定</h1>
+      <p>檢查環境與安裝依賴</p>
+    </header>
+
+    <div class="nav-links">
+      <a href="/" class="nav-link">← 返回下載頁面</a>
+    </div>
+
+    <div class="status-card">
+      <h2>環境狀態</h2>
+      <div class="status-item">
+        <span class="status-label">Python</span>
+        <div class="status-value">
+          <span id="pythonVersion">檢查中...</span>
+          <span id="pythonStatus" class="status-badge loading">檢查中</span>
+        </div>
+      </div>
+      <div class="status-item">
+        <span class="status-label">gdown</span>
+        <div class="status-value">
+          <span id="gdownVersion">檢查中...</span>
+          <span id="gdownStatus" class="status-badge loading">檢查中</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-card install-section">
+      <h2>安裝 gdown</h2>
+      <p style="color: #666; margin-bottom: 1rem;">
+        如果 gdown 未安裝，點擊下方按鈕自動安裝。
+      </p>
+      <button id="installBtn" class="btn btn-primary" disabled>
+        安裝 gdown
+      </button>
+      <button id="refreshBtn" class="btn" style="margin-left: 1rem;">
+        重新檢查
+      </button>
+      <div id="installOutput" class="install-output" style="display: none;"></div>
+    </div>
+
+    <div class="status-card">
+      <h2>使用說明</h2>
+      <ul style="color: #666; line-height: 1.8;">
+        <li><strong>Python</strong>：需要 Python 3.7 或更高版本</li>
+        <li><strong>gdown</strong>：用於下載 Google Drive 檔案的 CLI 工具</li>
+        <li><strong>Cookies</strong>：gdown 會自動使用 <code>~/.cache/gdown/cookies.txt</code></li>
+        <li><strong>斷點續傳</strong>：系統會自動跳過已下載的檔案</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
+
