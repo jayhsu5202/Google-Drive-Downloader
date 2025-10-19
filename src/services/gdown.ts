@@ -265,9 +265,15 @@ export class GdownService extends EventEmitter {
       // Check if all files were downloaded successfully
       const allFilesDownloaded = total > 0 && current === total;
 
-      // If all files downloaded, treat as success even if exit code is non-zero
-      // (gdown might exit with error after downloading all files due to quota limits)
-      if (code === 0 || allFilesDownloaded) {
+      // Check if there were quota or permission errors
+      const hasQuotaError = errorBuffer.includes('Too many users have viewed or downloaded');
+      const hasPermissionError = errorBuffer.includes('Failed to retrieve') ||
+                                 errorBuffer.includes('Cannot retrieve the public link');
+
+      // If all files downloaded AND no quota/permission errors, treat as success
+      // If there were quota/permission errors, treat as error even if all files downloaded
+      // (user might want to retry with updated cookies)
+      if (code === 0 || (allFilesDownloaded && !hasQuotaError && !hasPermissionError)) {
         const progress: DownloadProgress = {
           current: total,
           total,
