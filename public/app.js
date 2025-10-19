@@ -502,10 +502,6 @@ function displayFiles(files) {
         <div class="file-name">${escapeHtml(file.name)}</div>
         <div class="file-size">${formatFileSize(file.size)}</div>
       </div>
-      <div class="file-status">
-        <span class="status-icon">${file.verified ? '✅' : '⏳'}</span>
-        <span>${file.verified ? '已驗證' : '待驗證'}</span>
-      </div>
     </div>
   `).join('');
 }

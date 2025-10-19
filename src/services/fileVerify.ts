@@ -65,30 +65,22 @@ export async function verifyFile(
 }
 
 /**
- * Get file information including size and hash
+ * Get file information including size
  * @param filePath - Path to the file
- * @param calculateHash - Whether to calculate hash (default: true)
  * @returns Promise<DownloadedFile> - File information
  */
 export async function getFileInfo(
-  filePath: string,
-  calculateHash: boolean = true
+  filePath: string
 ): Promise<DownloadedFile> {
   try {
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
 
-    let hash: string | undefined;
-    if (calculateHash) {
-      hash = await calculateFileHash(filePath, 'md5');
-    }
-
     return {
       name: fileName,
       size: stats.size,
       path: filePath,
-      verified: false,
-      hash
+      verified: false
     };
   } catch (error) {
     console.error(`Error getting file info for ${filePath}:`, error);
