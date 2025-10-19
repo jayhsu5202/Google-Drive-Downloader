@@ -464,6 +464,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         })}\n\n`);
       });
 
+      // Release gdown service to free resources
+      gdownService = null;
+
       resolve();
     });
 
@@ -495,6 +498,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
           error
         })}\n\n`);
       });
+
+      // Release gdown service to free resources
+      gdownService = null;
 
       resolve();
     });
