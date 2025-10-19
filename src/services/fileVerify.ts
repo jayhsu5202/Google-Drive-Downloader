@@ -97,19 +97,33 @@ export async function getFileInfo(
 }
 
 /**
- * Scan directory and get all files with their info
+ * Scan directory and get all files with their info (recursively)
  * @param dirPath - Directory path
  * @returns Promise<DownloadedFile[]> - Array of file information
  */
 export async function scanDirectory(dirPath: string): Promise<DownloadedFile[]> {
   try {
+    // Check if directory exists
+    if (!fs.existsSync(dirPath)) {
+      return [];
+    }
+
     const files = fs.readdirSync(dirPath);
-    const fileInfoPromises = files
-      .filter(file => {
-        const fullPath = path.join(dirPath, file);
-        return fs.statSync(fullPath).isFile();
-      })
-      .map(file => getFileInfo(path.join(dirPath, file)));
+    const fileInfoPromises: Promise<DownloadedFile>[] = [];
+
+    for (const file of files) {
+      const fullPath = path.join(dirPath, file);
+      const stats = fs.statSync(fullPath);
+
+      if (stats.isFile()) {
+        // Add file to list
+        fileInfoPromises.push(getFileInfo(fullPath));
+      } else if (stats.isDirectory()) {
+        // Recursively scan subdirectory
+        const subFiles = await scanDirectory(fullPath);
+        fileInfoPromises.push(...subFiles.map(f => Promise.resolve(f)));
+      }
+    }
 
     return await Promise.all(fileInfoPromises);
   } catch (error) {
