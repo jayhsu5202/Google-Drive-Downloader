@@ -19,6 +19,7 @@ const tabContents = document.querySelectorAll('.tab-content');
 // DOM Elements - Cookie Tab
 const cookiePath = document.getElementById('cookiePath');
 const cookieEditor = document.getElementById('cookieEditor');
+const cookieStatus = document.getElementById('cookieStatus');
 const saveCookiesBtn = document.getElementById('saveCookiesBtn');
 const loadCookiesBtn = document.getElementById('loadCookiesBtn');
 const clearCookiesBtn = document.getElementById('clearCookiesBtn');
@@ -236,14 +237,21 @@ async function restartDownload() {
     connectProgressStream();
 
     // Update UI
-    progressStatus.textContent = `重啟 ${data.count} 個任務...`;
-    progressStatus.style.color = '';
+    progressStatus.textContent = `✅ 已重啟 ${data.count} 個任務`;
+    progressStatus.style.color = '#4CAF50'; // Green color for success
     progressSection.style.display = 'block';
 
-    alert(`✅ 已重啟 ${data.count} 個任務`);
+    // Auto-hide success message after 3 seconds
+    setTimeout(() => {
+      if (progressStatus.textContent.includes('已重啟')) {
+        progressStatus.style.color = '';
+      }
+    }, 3000);
   } catch (error) {
     console.error('Error restarting tasks:', error);
-    alert(`重啟失敗：${error.message}`);
+    progressStatus.textContent = `❌ 重啟失敗：${error.message}`;
+    progressStatus.style.color = '#f44336'; // Red color for error
+    progressSection.style.display = 'block';
   }
 }
 
@@ -569,26 +577,32 @@ async function saveCookies() {
     const data = await response.json();
 
     if (data.success) {
-      alert(`✅ Cookies 儲存成功！\n\n檔案路徑：${data.path}`);
+      // Show success message in UI
+      cookieStatus.textContent = `✅ Cookies 儲存成功！路徑：${data.path}`;
+      cookieStatus.style.color = '#4CAF50'; // Green color
+
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        cookieStatus.textContent = '';
+        cookieStatus.style.color = '';
+      }, 3000);
 
       // Auto-restart download if there's an active download
       if (isDownloading && lastDownloadUrl) {
-        const shouldRestart = confirm('是否要重啟下載以使用新的 Cookie？');
-        if (shouldRestart) {
-          // Switch to download tab
-          const downloadTab = document.querySelector('.tab[data-tab="download"]');
-          if (downloadTab) {
-            downloadTab.click();
-          }
-
-          // Wait for tab switch animation
-          setTimeout(() => {
-            restartDownload();
-          }, 300);
+        // Switch to download tab
+        const downloadTab = document.querySelector('.tab[data-tab="download"]');
+        if (downloadTab) {
+          downloadTab.click();
         }
+
+        // Wait for tab switch animation, then restart
+        setTimeout(() => {
+          restartDownload();
+        }, 300);
       }
     } else {
-      alert(`❌ 儲存失敗：${data.error}`);
+      cookieStatus.textContent = `❌ 儲存失敗：${data.error}`;
+      cookieStatus.style.color = '#f44336'; // Red color
     }
   } catch (error) {
     console.error('Error saving cookies:', error);

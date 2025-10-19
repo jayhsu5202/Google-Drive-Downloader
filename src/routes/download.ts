@@ -240,8 +240,8 @@ router.post('/restart', (_req: Request, res: Response) => {
       if (task.status === 'error' || task.status === 'downloading') {
         taskManager.updateTask(task.id, {
           status: 'pending',
-          error: undefined,
-          progress: 0
+          error: undefined
+          // Don't reset progress - preserve for resume download
         });
         restartedCount++;
       }
