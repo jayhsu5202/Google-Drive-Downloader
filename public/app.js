@@ -19,6 +19,43 @@ let isDownloading = false;
 startBtn.addEventListener('click', startDownload);
 cancelBtn.addEventListener('click', cancelDownload);
 
+// Check for ongoing downloads on page load
+window.addEventListener('DOMContentLoaded', checkDownloadStatus);
+
+/**
+ * Check download status on page load
+ */
+async function checkDownloadStatus() {
+  try {
+    const response = await fetch('/api/download/status');
+    const data = await response.json();
+
+    if (data.isDownloading && data.pendingTasks.length > 0) {
+      console.log('Found ongoing downloads, reconnecting...', data);
+
+      // Update UI
+      isDownloading = true;
+      startBtn.disabled = true;
+      cancelBtn.disabled = false;
+      progressSection.style.display = 'block';
+
+      // Show current task info
+      if (data.currentTask) {
+        progressStatus.textContent = `恢復下載：${data.currentTask.url}`;
+        progressPercentage.textContent = `${data.currentTask.progress || 0}%`;
+        progressFill.style.width = `${data.currentTask.progress || 0}%`;
+      } else {
+        progressStatus.textContent = `等待下載 ${data.pendingTasks.length} 個任務...`;
+      }
+
+      // Connect to SSE
+      connectToProgressStream();
+    }
+  } catch (error) {
+    console.error('Error checking download status:', error);
+  }
+}
+
 /**
  * Start download process
  */
@@ -154,13 +191,18 @@ function disconnectProgressStream() {
  * Update progress UI
  */
 function updateProgress(data) {
-  const { current, total, currentFile: file, percentage } = data;
+  const { current = 0, total = 0, currentFile: file = '', percentage = 0 } = data;
+
+  console.log('Updating progress:', { current, total, file, percentage });
 
   progressStatus.textContent = '下載中...';
   progressPercentage.textContent = `${percentage}%`;
   progressFill.style.width = `${percentage}%`;
-  currentFile.textContent = file || '-';
-  fileCount.textContent = `${current} / ${total}`;
+  currentFile.textContent = file || '準備中...';
+  fileCount.textContent = total > 0 ? `${current} / ${total}` : '計算中...';
+
+  // Ensure progress section is visible
+  progressSection.style.display = 'block';
 }
 
 /**

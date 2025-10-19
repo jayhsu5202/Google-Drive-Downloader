@@ -208,6 +208,22 @@ router.get('/tasks', (_req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/download/status
+ * Get current download status
+ */
+router.get('/status', (_req: Request, res: Response) => {
+  const pendingTasks = taskManager.getPendingTasks();
+  const isDownloading = isProcessingQueue || pendingTasks.length > 0;
+
+  res.json({
+    isDownloading,
+    queueLength: downloadQueue.length,
+    pendingTasks,
+    currentTask: pendingTasks.find(t => t.status === 'downloading')
+  });
+});
+
+/**
  * DELETE /api/download/tasks/:id
  * Delete a task
  */
