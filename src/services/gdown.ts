@@ -41,6 +41,7 @@ export class GdownService extends EventEmitter {
     let current = 0;
     let total = 0;
     let lastPercentage = -1;
+    let fileList: string[] = [];
 
     // Parse stdout for progress
     this.process.stdout?.on('data', (data: Buffer) => {
@@ -88,6 +89,48 @@ export class GdownService extends EventEmitter {
       if (barMatch) {
         const fileProgress = parseInt(barMatch[1], 10);
         console.log(`[gdown] File progress: ${fileProgress}%`);
+      }
+
+      // Pattern 5: "Building directory structure completed"
+      if (output.includes('Building directory structure completed')) {
+        console.log('[gdown] Directory structure built, starting file processing');
+      }
+
+      // Pattern 6: "Processing file <id> <filename>"
+      const processingMatch = output.match(/Processing file\s+\S+\s+(.+)/i);
+      if (processingMatch) {
+        const newFile = processingMatch[1].trim();
+
+        // Add to file list if not already there
+        if (!fileList.includes(newFile)) {
+          fileList.push(newFile);
+          total = fileList.length;
+        }
+
+        if (newFile !== currentFile) {
+          currentFile = newFile;
+          current++;
+          hasUpdate = true;
+        }
+      }
+
+      // Pattern 7: "Skipping already downloaded file <path>"
+      const skippingMatch = output.match(/Skipping already downloaded file\s+(.+)/i);
+      if (skippingMatch) {
+        const filePath = skippingMatch[1].trim();
+        const fileName = filePath.split(/[/\\]/).pop() || filePath;
+
+        // Add to file list if not already there
+        if (!fileList.includes(fileName)) {
+          fileList.push(fileName);
+          total = fileList.length;
+        }
+
+        if (fileName !== currentFile) {
+          currentFile = `[已跳過] ${fileName}`;
+          current++;
+          hasUpdate = true;
+        }
       }
 
       // Only emit if there's an update
