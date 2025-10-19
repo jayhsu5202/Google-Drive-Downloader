@@ -42,6 +42,7 @@ export class GdownService extends EventEmitter {
     let total = 0;
     let lastPercentage = -1;
     let fileList: string[] = [];
+    let lastFileProgress = 0;
 
     // Parse stdout for progress
     this.process.stdout?.on('data', (data: Buffer) => {
@@ -89,6 +90,14 @@ export class GdownService extends EventEmitter {
       if (barMatch) {
         const fileProgress = parseInt(barMatch[1], 10);
         console.log(`[gdown] File progress: ${fileProgress}%`);
+
+        // If file download completed (100%), increment current
+        if (fileProgress === 100 && lastFileProgress < 100) {
+          current++;
+          hasUpdate = true;
+          console.log(`[gdown] File completed, current: ${current}/${total}`);
+        }
+        lastFileProgress = fileProgress;
       }
 
       // Pattern 5: "Building directory structure completed"
@@ -105,11 +114,14 @@ export class GdownService extends EventEmitter {
         if (!fileList.includes(newFile)) {
           fileList.push(newFile);
           total = fileList.length;
+          hasUpdate = true;
+          console.log(`[gdown] Found file: ${newFile}, total: ${total}`);
         }
 
+        // Update current file being processed (but don't increment current yet)
         if (newFile !== currentFile) {
           currentFile = newFile;
-          current++;
+          lastFileProgress = 0; // Reset file progress
           hasUpdate = true;
         }
       }
@@ -133,8 +145,17 @@ export class GdownService extends EventEmitter {
         }
       }
 
+      // Calculate overall progress
+      // Progress = (completed files + current file progress) / total files
+      let percentage = 0;
+      if (total > 0) {
+        const completedProgress = current;
+        const currentFileProgressFraction = lastFileProgress / 100;
+        const overallProgress = (completedProgress + currentFileProgressFraction) / total;
+        percentage = Math.round(overallProgress * 100);
+      }
+
       // Only emit if there's an update
-      const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
       if (hasUpdate || percentage !== lastPercentage) {
         lastPercentage = percentage;
         const progress: DownloadProgress = {
