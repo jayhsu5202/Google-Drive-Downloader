@@ -36,7 +36,7 @@ setTimeout(autoResumeTasks, 2000);
  * POST /api/download/batch
  * Start batch downloading from multiple Google Drive URLs
  */
-router.post('/batch', (req: Request, res: Response) => {
+router.post('/batch', async (req: Request, res: Response) => {
   try {
     const { urls, outputDir = './downloads' }: { urls: string[]; outputDir?: string } = req.body;
 
@@ -45,22 +45,31 @@ router.post('/batch', (req: Request, res: Response) => {
       return;
     }
 
-    // Create tasks for all URLs, but skip already completed tasks
+    // Create tasks for all URLs, but skip if folder already exists with files
     const tasks: DownloadTask[] = [];
     const skippedTasks: DownloadTask[] = [];
 
     for (const url of urls) {
       const task = taskManager.createTask(url, outputDir);
 
-      // Check if task already exists and is completed
-      if (task.status === 'completed') {
-        console.log(`Skipping already completed task: ${task.id}`);
-        skippedTasks.push(task);
-      } else {
-        tasks.push(task);
-        // Add task to queue
-        downloadQueue.push(task.id);
+      // Check if target folder already exists and has files
+      const targetDir = `${outputDir}/${task.id}`;
+      const fs = await import('fs');
+
+      if (fs.existsSync(targetDir)) {
+        const files = fs.readdirSync(targetDir);
+        if (files.length > 0) {
+          console.log(`Skipping task ${task.id}: folder already exists with ${files.length} files`);
+          skippedTasks.push(task);
+          // Remove task from memory since we're skipping it
+          taskManager.deleteTask(task.id);
+          continue;
+        }
       }
+
+      tasks.push(task);
+      // Add task to queue
+      downloadQueue.push(task.id);
     }
 
     // Start processing queue (don't await, let it run in background)
@@ -70,7 +79,7 @@ router.post('/batch', (req: Request, res: Response) => {
 
     res.json({
       status: 'started',
-      message: `Added ${tasks.length} tasks to queue, skipped ${skippedTasks.length} completed tasks`,
+      message: `Added ${tasks.length} tasks to queue, skipped ${skippedTasks.length} existing folders`,
       tasks,
       skippedTasks
     });

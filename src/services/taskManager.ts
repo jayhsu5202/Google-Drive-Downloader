@@ -68,13 +68,16 @@ export class TaskManager {
 
   /**
    * Save tasks to file
-   * Save all tasks except cancelled ones
+   * Only save tasks that need to be persisted (pending, downloading, error)
+   * Don't save completed or cancelled tasks
    */
   private saveTasks(): void {
     try {
-      // Save all tasks except cancelled ones
+      // Only save tasks that need to be persisted
       const tasksToSave = Array.from(this.tasks.values()).filter(task =>
-        task.status !== 'cancelled'
+        task.status === 'pending' ||
+        task.status === 'downloading' ||
+        task.status === 'error'
       );
 
       fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksToSave, null, 2));
@@ -138,9 +141,9 @@ export class TaskManager {
         delete task.error;
       }
 
-      // Auto-cleanup: Only remove cancelled tasks from memory
-      // Keep completed tasks to prevent duplicate downloads
-      if (task.status === 'cancelled') {
+      // Auto-cleanup: Remove completed or cancelled tasks from memory
+      // They won't be saved to file anyway, so no need to keep them in memory
+      if (task.status === 'completed' || task.status === 'cancelled') {
         console.log(`Auto-removing ${task.status} task ${id} from memory`);
         this.tasks.delete(id);
         this.saveTasks(); // Save to update the file
