@@ -250,6 +250,13 @@ router.post('/restart', (_req: Request, res: Response) => {
     });
     activeServices.clear();
 
+    // Reset queue processing flag
+    isProcessingQueue = false;
+
+    // Clear download queue and active downloads to prevent processing remaining tasks
+    downloadQueue.length = 0;
+    activeDownloads.clear();
+
     // Get all tasks
     const allTasks = taskManager.getAllTasks();
 
@@ -356,48 +363,53 @@ async function processDownloadQueue(): Promise<void> {
 
   isProcessingQueue = true;
 
-  while (downloadQueue.length > 0 || activeDownloads.size > 0) {
-    // Start new downloads if we have capacity
-    while (downloadQueue.length > 0 && activeDownloads.size < maxConcurrentDownloads) {
-      const taskId = downloadQueue.shift();
-      if (!taskId) continue;
+  try {
+    while (downloadQueue.length > 0 || activeDownloads.size > 0) {
+      // Start new downloads if we have capacity
+      while (downloadQueue.length > 0 && activeDownloads.size < maxConcurrentDownloads) {
+        const taskId = downloadQueue.shift();
+        if (!taskId) continue;
 
-      const task = taskManager.getTask(taskId);
-      if (!task) continue;
+        const task = taskManager.getTask(taskId);
+        if (!task) continue;
 
-      // Skip completed tasks
-      if (task.status === 'completed') {
-        console.log(`Task ${taskId} already completed, skipping`);
-        continue;
+        // Skip completed tasks
+        if (task.status === 'completed') {
+          console.log(`Task ${taskId} already completed, skipping`);
+          continue;
+        }
+
+        // Update task status
+        taskManager.updateTask(taskId, { status: 'downloading' });
+
+        // Broadcast task start
+        progressClients.forEach(client => {
+          client.write(`data: ${JSON.stringify({
+            type: 'task_start',
+            task
+          })}\n\n`);
+        });
+
+        // Add to active downloads
+        activeDownloads.add(taskId);
+
+        // Download (don't await, let it run in parallel)
+        downloadTask(task).finally(() => {
+          activeDownloads.delete(taskId);
+        });
       }
 
-      // Update task status
-      taskManager.updateTask(taskId, { status: 'downloading' });
-
-      // Broadcast task start
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          type: 'task_start',
-          task
-        })}\n\n`);
-      });
-
-      // Add to active downloads
-      activeDownloads.add(taskId);
-
-      // Download (don't await, let it run in parallel)
-      downloadTask(task).finally(() => {
-        activeDownloads.delete(taskId);
-      });
+      // Wait a bit before checking again
+      if (downloadQueue.length > 0 || activeDownloads.size > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
-
-    // Wait a bit before checking again
-    if (downloadQueue.length > 0 || activeDownloads.size > 0) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+  } catch (error) {
+    console.error('[processDownloadQueue] Error processing queue:', error);
+  } finally {
+    // Always reset the flag, even if an error occurred
+    isProcessingQueue = false;
   }
-
-  isProcessingQueue = false;
 }
 
 /**
