@@ -247,6 +247,9 @@ router.post('/cancel', (_req: Request, res: Response) => {
     // Reset queue processing flag
     isProcessingQueue = false;
 
+    // Clear download queue to prevent processing remaining tasks
+    downloadQueue.length = 0;
+
     progressClients.forEach(client => {
       client.write(`data: ${JSON.stringify({ status: 'cancelled' })}\n\n`);
     });
