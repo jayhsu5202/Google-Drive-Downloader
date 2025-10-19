@@ -208,7 +208,7 @@ router.post('/cancel', (_req: Request, res: Response) => {
   if (gdownService) {
     gdownService.cancel();
     gdownService = null;
-    
+
     progressClients.forEach(client => {
       client.write(`data: ${JSON.stringify({ status: 'cancelled' })}\n\n`);
     });
@@ -216,6 +216,53 @@ router.post('/cancel', (_req: Request, res: Response) => {
     res.json({ status: 'cancelled', message: 'Download cancelled' });
   } else {
     res.status(400).json({ error: 'No active download to cancel' });
+  }
+});
+
+/**
+ * POST /api/download/restart
+ * Restart all error/downloading tasks
+ */
+router.post('/restart', (_req: Request, res: Response) => {
+  try {
+    // Cancel current download
+    if (gdownService) {
+      gdownService.cancel();
+      gdownService = null;
+    }
+
+    // Get all tasks
+    const allTasks = taskManager.getAllTasks();
+
+    // Reset error tasks to pending
+    let restartedCount = 0;
+    for (const task of allTasks) {
+      if (task.status === 'error' || task.status === 'downloading') {
+        taskManager.updateTask(task.id, {
+          status: 'pending',
+          error: undefined,
+          progress: 0
+        });
+        restartedCount++;
+      }
+    }
+
+    // Start processing tasks
+    if (restartedCount > 0) {
+      setTimeout(() => processDownloadQueue(), 500);
+    }
+
+    res.json({
+      status: 'restarted',
+      message: `Restarted ${restartedCount} tasks`,
+      count: restartedCount
+    });
+  } catch (error) {
+    console.error('Error restarting tasks:', error);
+    res.status(500).json({
+      error: 'Failed to restart tasks',
+      details: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 
@@ -252,12 +299,13 @@ router.get('/tasks', (_req: Request, res: Response) => {
  */
 router.get('/status', (_req: Request, res: Response) => {
   const pendingTasks = taskManager.getPendingTasks();
+  const allTasks = taskManager.getAllTasks();
   const isDownloading = isProcessingQueue || pendingTasks.length > 0;
 
   res.json({
     isDownloading,
     queueLength: downloadQueue.length,
-    pendingTasks,
+    pendingTasks: allTasks, // Return all tasks including error tasks
     currentTask: pendingTasks.find(t => t.status === 'downloading')
   });
 });

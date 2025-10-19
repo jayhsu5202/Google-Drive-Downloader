@@ -90,6 +90,17 @@ async function checkDownloadStatus() {
     const response = await fetch('/api/download/status');
     const data = await response.json();
 
+    // Enable restart button if there are any tasks (including error tasks)
+    const allTasks = data.pendingTasks || [];
+    if (allTasks.length > 0) {
+      restartBtn.disabled = false;
+      // Save the first task's URL for reference
+      if (allTasks[0]) {
+        lastDownloadUrl = allTasks[0].url;
+        lastOutputDir = allTasks[0].outputDir;
+      }
+    }
+
     if (data.isDownloading && data.pendingTasks.length > 0) {
       console.log('Found ongoing downloads, reconnecting...', data);
 
@@ -97,6 +108,7 @@ async function checkDownloadStatus() {
       isDownloading = true;
       startBtn.disabled = true;
       cancelBtn.disabled = false;
+      restartBtn.disabled = false;
       progressSection.style.display = 'block';
 
       // Show current task info
@@ -205,32 +217,34 @@ async function cancelDownload() {
  * Restart download process
  */
 async function restartDownload() {
-  if (!lastDownloadUrl) {
-    alert('沒有可重啟的下載任務');
-    return;
-  }
+  console.log('Restarting all tasks...');
 
-  console.log('Restarting download...');
-
-  // Cancel current download first
   try {
-    await fetch('/api/download/cancel', { method: 'POST' });
+    // Call restart API to reset all error tasks
+    const response = await fetch('/api/download/restart', { method: 'POST' });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to restart tasks');
+    }
+
+    console.log(`Restarted ${data.count} tasks`);
+
+    // Disconnect and reconnect SSE
+    disconnectProgressStream();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    connectProgressStream();
+
+    // Update UI
+    progressStatus.textContent = `重啟 ${data.count} 個任務...`;
+    progressStatus.style.color = '';
+    progressSection.style.display = 'block';
+
+    alert(`✅ 已重啟 ${data.count} 個任務`);
   } catch (error) {
-    console.error('Error cancelling before restart:', error);
+    console.error('Error restarting tasks:', error);
+    alert(`重啟失敗：${error.message}`);
   }
-
-  // Wait a bit for cleanup
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Disconnect SSE
-  disconnectProgressStream();
-
-  // Restore URL and output dir
-  driveUrlInput.value = lastDownloadUrl;
-  outputDirInput.value = lastOutputDir;
-
-  // Start download again
-  await startDownload();
 }
 
 /**
