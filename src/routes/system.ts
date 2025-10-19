@@ -1,5 +1,8 @@
 import { Router, type Request, type Response } from 'express';
 import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 const router = Router();
 
@@ -34,12 +37,88 @@ router.post('/install-gdown', async (_req: Request, res: Response) => {
     res.json(result);
   } catch (error) {
     console.error('Error installing gdown:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to install gdown',
       details: error instanceof Error ? error.message : String(error)
     });
   }
 });
+
+/**
+ * GET /api/system/cookies
+ * Get current cookies.txt content
+ */
+router.get('/cookies', async (_req: Request, res: Response) => {
+  try {
+    const cookiesPath = getCookiesPath();
+
+    if (fs.existsSync(cookiesPath)) {
+      const content = fs.readFileSync(cookiesPath, 'utf-8');
+      res.json({
+        exists: true,
+        content,
+        path: cookiesPath
+      });
+    } else {
+      res.json({
+        exists: false,
+        path: cookiesPath
+      });
+    }
+  } catch (error) {
+    console.error('Error reading cookies:', error);
+    res.status(500).json({
+      error: 'Failed to read cookies',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * POST /api/system/cookies
+ * Update cookies.txt content
+ */
+router.post('/cookies', async (req: Request, res: Response) => {
+  try {
+    const { content } = req.body;
+
+    if (!content || typeof content !== 'string') {
+      res.status(400).json({ error: 'Invalid cookies content' });
+      return;
+    }
+
+    const cookiesPath = getCookiesPath();
+    const cookiesDir = path.dirname(cookiesPath);
+
+    // Create directory if not exists
+    if (!fs.existsSync(cookiesDir)) {
+      fs.mkdirSync(cookiesDir, { recursive: true });
+    }
+
+    // Write cookies file
+    fs.writeFileSync(cookiesPath, content, 'utf-8');
+
+    res.json({
+      success: true,
+      message: 'Cookies updated successfully',
+      path: cookiesPath
+    });
+  } catch (error) {
+    console.error('Error updating cookies:', error);
+    res.status(500).json({
+      error: 'Failed to update cookies',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * Get gdown cookies.txt path
+ */
+function getCookiesPath(): string {
+  const homeDir = os.homedir();
+  return path.join(homeDir, '.cache', 'gdown', 'cookies.txt');
+}
 
 /**
  * Check if Python is installed

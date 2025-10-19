@@ -7,6 +7,42 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ant-design@5.22.0/dist/reset.css">
   <link rel="stylesheet" href="style.css">
   <style>
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .tab {
+      padding: 1rem 2rem;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: #666;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .tab:hover {
+      color: #667eea;
+    }
+
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
     .status-card {
       background: white;
       border-radius: 12px;
@@ -63,10 +99,6 @@
       border: 1px solid #91d5ff;
     }
 
-    .install-section {
-      margin-top: 2rem;
-    }
-
     .install-output {
       background: #f5f5f5;
       border: 1px solid #d9d9d9;
@@ -81,21 +113,59 @@
       word-wrap: break-word;
     }
 
-    .nav-links {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
     .nav-link {
       color: #667eea;
       text-decoration: none;
       font-weight: 500;
       transition: color 0.3s;
+      display: inline-block;
+      margin-bottom: 1rem;
     }
 
     .nav-link:hover {
       color: #764ba2;
+    }
+
+    .cookie-editor {
+      width: 100%;
+      min-height: 300px;
+      padding: 1rem;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      resize: vertical;
+      background: #fafafa;
+    }
+
+    .cookie-editor:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+    }
+
+    .cookie-info {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      color: #0050b3;
+      line-height: 1.6;
+    }
+
+    .cookie-path {
+      background: #f5f5f5;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -103,53 +173,140 @@
   <div class="container">
     <header class="header">
       <h1>⚙️ 系統設定</h1>
-      <p>檢查環境與安裝依賴</p>
+      <p>檢查環境、安裝依賴與管理 Cookies</p>
     </header>
 
-    <div class="nav-links">
-      <a href="/" class="nav-link">← 返回下載頁面</a>
+    <a href="/" class="nav-link">← 返回下載頁面</a>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="environment">環境檢查</button>
+      <button class="tab" data-tab="cookies">Cookie 管理</button>
+      <button class="tab" data-tab="help">使用說明</button>
     </div>
 
-    <div class="status-card">
-      <h2>環境狀態</h2>
-      <div class="status-item">
-        <span class="status-label">Python</span>
-        <div class="status-value">
-          <span id="pythonVersion">檢查中...</span>
-          <span id="pythonStatus" class="status-badge loading">檢查中</span>
+    <!-- 環境檢查 Tab -->
+    <div id="environment" class="tab-content active">
+      <div class="status-card">
+        <h2>環境狀態</h2>
+        <div class="status-item">
+          <span class="status-label">Python</span>
+          <div class="status-value">
+            <span id="pythonVersion">檢查中...</span>
+            <span id="pythonStatus" class="status-badge loading">檢查中</span>
+          </div>
+        </div>
+        <div class="status-item">
+          <span class="status-label">gdown</span>
+          <div class="status-value">
+            <span id="gdownVersion">檢查中...</span>
+            <span id="gdownStatus" class="status-badge loading">檢查中</span>
+          </div>
         </div>
       </div>
-      <div class="status-item">
-        <span class="status-label">gdown</span>
-        <div class="status-value">
-          <span id="gdownVersion">檢查中...</span>
-          <span id="gdownStatus" class="status-badge loading">檢查中</span>
+
+      <div class="status-card">
+        <h2>安裝 gdown</h2>
+        <p style="color: #666; margin-bottom: 1rem;">
+          如果 gdown 未安裝，點擊下方按鈕自動安裝。
+        </p>
+        <div class="btn-group">
+          <button id="installBtn" class="btn btn-primary" disabled>
+            安裝 gdown
+          </button>
+          <button id="refreshBtn" class="btn">
+            重新檢查
+          </button>
+        </div>
+        <div id="installOutput" class="install-output" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Cookie 管理 Tab -->
+    <div id="cookies" class="tab-content">
+      <div class="status-card">
+        <h2>Cookie 編輯器</h2>
+
+        <div class="cookie-info">
+          <strong>📌 如何解決 Google Drive 流量限制？</strong><br>
+          當遇到「Too many users have viewed or downloaded this file」錯誤時：
+          <ol style="margin: 0.5rem 0 0 1.5rem;">
+            <li>使用瀏覽器擴充功能（如 <strong>Get cookies.txt LOCALLY</strong>）匯出 cookies.txt</li>
+            <li>將內容貼到下方編輯器</li>
+            <li>點擊「儲存 Cookies」</li>
+            <li>重新下載即可使用您的 Google 帳號權限</li>
+          </ol>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <strong>Cookie 檔案路徑：</strong>
+          <span id="cookiePath" class="cookie-path">載入中...</span>
+        </div>
+
+        <textarea
+          id="cookieEditor"
+          class="cookie-editor"
+          placeholder="將 cookies.txt 內容貼到這裡...&#10;&#10;格式範例：&#10;# Netscape HTTP Cookie File&#10;.google.com	TRUE	/	TRUE	0	NID	xxx&#10;.google.com	TRUE	/	TRUE	0	SID	xxx"
+        ></textarea>
+
+        <div class="btn-group">
+          <button id="saveCookiesBtn" class="btn btn-primary">
+            💾 儲存 Cookies
+          </button>
+          <button id="loadCookiesBtn" class="btn">
+            🔄 重新載入
+          </button>
+          <button id="clearCookiesBtn" class="btn" style="background: #ff4d4f; color: white;">
+            🗑️ 清除 Cookies
+          </button>
         </div>
       </div>
     </div>
 
-    <div class="status-card install-section">
-      <h2>安裝 gdown</h2>
-      <p style="color: #666; margin-bottom: 1rem;">
-        如果 gdown 未安裝，點擊下方按鈕自動安裝。
-      </p>
-      <button id="installBtn" class="btn btn-primary" disabled>
-        安裝 gdown
-      </button>
-      <button id="refreshBtn" class="btn" style="margin-left: 1rem;">
-        重新檢查
-      </button>
-      <div id="installOutput" class="install-output" style="display: none;"></div>
-    </div>
+    <!-- 使用說明 Tab -->
+    <div id="help" class="tab-content">
+      <div class="status-card">
+        <h2>使用說明</h2>
+        <ul style="color: #666; line-height: 1.8;">
+          <li><strong>Python</strong>：需要 Python 3.7 或更高版本</li>
+          <li><strong>gdown</strong>：用於下載 Google Drive 檔案的 CLI 工具（版本 >= 5.0.0）</li>
+          <li><strong>Cookies</strong>：gdown 會自動使用 <code>~/.cache/gdown/cookies.txt</code></li>
+          <li><strong>斷點續傳</strong>：系統會自動跳過已下載的檔案</li>
+          <li><strong>流量限制</strong>：使用 Cookie 可以繞過 Google Drive 的 24 小時流量限制</li>
+        </ul>
+      </div>
 
-    <div class="status-card">
-      <h2>使用說明</h2>
-      <ul style="color: #666; line-height: 1.8;">
-        <li><strong>Python</strong>：需要 Python 3.7 或更高版本</li>
-        <li><strong>gdown</strong>：用於下載 Google Drive 檔案的 CLI 工具</li>
-        <li><strong>Cookies</strong>：gdown 會自動使用 <code>~/.cache/gdown/cookies.txt</code></li>
-        <li><strong>斷點續傳</strong>：系統會自動跳過已下載的檔案</li>
-      </ul>
+      <div class="status-card">
+        <h2>常見問題</h2>
+        <details style="margin-bottom: 1rem;">
+          <summary style="cursor: pointer; font-weight: 600; color: #333;">
+            ❓ 如何取得 cookies.txt？
+          </summary>
+          <p style="color: #666; margin-top: 0.5rem; line-height: 1.6;">
+            1. 安裝瀏覽器擴充功能「Get cookies.txt LOCALLY」<br>
+            2. 登入 Google Drive<br>
+            3. 點擊擴充功能圖示，匯出 cookies.txt<br>
+            4. 將內容複製到 Cookie 管理頁面
+          </p>
+        </details>
+
+        <details style="margin-bottom: 1rem;">
+          <summary style="cursor: pointer; font-weight: 600; color: #333;">
+            ❓ 為什麼需要 Cookies？
+          </summary>
+          <p style="color: #666; margin-top: 0.5rem; line-height: 1.6;">
+            Google Drive 對匿名下載有流量限制。使用 Cookies 可以讓 gdown 使用您的 Google 帳號權限，繞過流量限制。
+          </p>
+        </details>
+
+        <details>
+          <summary style="cursor: pointer; font-weight: 600; color: #333;">
+            ❓ Cookies 安全嗎？
+          </summary>
+          <p style="color: #666; margin-top: 0.5rem; line-height: 1.6;">
+            Cookies 儲存在您的本機電腦（<code>~/.cache/gdown/cookies.txt</code>），不會上傳到任何伺服器。請勿分享您的 Cookies 給他人。
+          </p>
+        </details>
+      </div>
     </div>
   </div>
 
