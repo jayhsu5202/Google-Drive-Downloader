@@ -274,50 +274,19 @@ function handleDownloadError(data) {
   console.error('Download error:', data);
 
   const error = data.error || '未知錯誤';
-
-  // Check for quota exceeded error
-  if (error.includes('QUOTA_EXCEEDED')) {
-    const cleanError = error.replace('QUOTA_EXCEEDED:', '');
-    progressStatus.textContent = `⚠️ ${cleanError}`;
-    showQuotaExceededDialog(data.taskId);
-    return;
-  }
+  const cleanError = error.replace(/^(QUOTA_EXCEEDED|PERMISSION_DENIED):/, '');
 
   // For batch downloads, show error but don't stop
   if (data.taskId) {
-    progressStatus.textContent = `⚠️ 任務 ${data.taskId} 失敗：${error}`;
+    progressStatus.textContent = `⚠️ 任務失敗：${cleanError}`;
     // Don't disconnect - other tasks may still be downloading
     // Don't reset UI - keep showing progress
   } else {
     // Single download error
     progressStatus.textContent = '❌ 下載失敗';
-    alert(`下載錯誤：${error}`);
+    alert(`下載錯誤：${cleanError}`);
     disconnectProgressStream();
     resetUI();
-  }
-}
-
-/**
- * Show quota exceeded dialog with instructions
- */
-function showQuotaExceededDialog(taskId) {
-  const message = `
-Google Drive 流量限制
-
-此檔案下載次數已達上限，請選擇以下解決方案：
-
-1. 建立副本（推薦）：
-   - 點擊下方「查看教學」按鈕
-   - 按照步驟建立副本
-   - 下載副本檔案
-
-2. 等待 24 小時後重試
-
-3. 使用 Google 帳號登入並設定 cookies
-  `;
-
-  if (confirm(message + '\n\n是否查看建立副本教學？')) {
-    window.open('/quota-help.html', '_blank');
   }
 }
 
