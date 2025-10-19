@@ -578,14 +578,16 @@ async function saveCookies() {
 
     if (data.success) {
       // Show success message in UI
-      cookieStatus.textContent = `✅ Cookies 儲存成功！路徑：${data.path}`;
-      cookieStatus.style.color = '#4CAF50'; // Green color
+      if (cookieStatus) {
+        cookieStatus.textContent = `✅ Cookies 儲存成功！路徑：${data.path}`;
+        cookieStatus.style.color = '#4CAF50'; // Green color
 
-      // Auto-hide success message after 3 seconds
-      setTimeout(() => {
-        cookieStatus.textContent = '';
-        cookieStatus.style.color = '';
-      }, 3000);
+        // Auto-hide success message after 3 seconds
+        setTimeout(() => {
+          cookieStatus.textContent = '';
+          cookieStatus.style.color = '';
+        }, 3000);
+      }
 
       // Auto-restart download if there's an active download
       if (isDownloading && lastDownloadUrl) {
@@ -601,12 +603,21 @@ async function saveCookies() {
         }, 300);
       }
     } else {
-      cookieStatus.textContent = `❌ 儲存失敗：${data.error}`;
-      cookieStatus.style.color = '#f44336'; // Red color
+      if (cookieStatus) {
+        cookieStatus.textContent = `❌ 儲存失敗：${data.error}`;
+        cookieStatus.style.color = '#f44336'; // Red color
+      } else {
+        alert(`儲存失敗：${data.error}`);
+      }
     }
   } catch (error) {
     console.error('Error saving cookies:', error);
-    alert(`儲存 Cookies 失敗：${error.message}`);
+    if (cookieStatus) {
+      cookieStatus.textContent = `❌ 儲存 Cookies 失敗：${error.message}`;
+      cookieStatus.style.color = '#f44336'; // Red color
+    } else {
+      alert(`儲存 Cookies 失敗：${error.message}`);
+    }
   } finally {
     saveCookiesBtn.disabled = false;
     saveCookiesBtn.textContent = '💾 儲存 Cookies';
