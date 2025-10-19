@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import fs from 'fs';
 import type { DownloadProgress } from '../types.js';
 
 export class GdownService extends EventEmitter {
@@ -11,11 +12,18 @@ export class GdownService extends EventEmitter {
    * @param outputDir - Output directory path
    */
   downloadFolder(url: string, outputDir: string = './downloads'): void {
+    // Ensure output directory exists
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
     // Extract folder ID from URL if needed
     const folderId = this.extractFolderId(url);
     
-    // Spawn gdown process
-    this.process = spawn('gdown', [
+    // Spawn gdown process (use python -m gdown for Windows compatibility)
+    this.process = spawn('python', [
+      '-m',
+      'gdown',
       '--folder',
       folderId,
       '-O',
