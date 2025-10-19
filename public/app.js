@@ -3,6 +3,7 @@ const driveUrlInput = document.getElementById('driveUrl');
 const outputDirInput = document.getElementById('outputDir');
 const startBtn = document.getElementById('startBtn');
 const cancelBtn = document.getElementById('cancelBtn');
+const restartBtn = document.getElementById('restartBtn');
 const progressSection = document.getElementById('progressSection');
 const progressStatus = document.getElementById('progressStatus');
 const progressPercentage = document.getElementById('progressPercentage');
@@ -34,10 +35,13 @@ const installOutput = document.getElementById('installOutput');
 // State
 let eventSource = null;
 let isDownloading = false;
+let lastDownloadUrl = '';
+let lastOutputDir = '';
 
 // Event Listeners - Download Tab
 startBtn.addEventListener('click', startDownload);
 cancelBtn.addEventListener('click', cancelDownload);
+restartBtn.addEventListener('click', restartDownload);
 
 // Event Listeners - Tabs
 tabs.forEach(tab => {
@@ -135,11 +139,16 @@ async function startDownload() {
     return;
   }
 
+  // Save for restart
+  lastDownloadUrl = urlsText;
+  lastOutputDir = outputDir;
+
   try {
     // Update UI
     isDownloading = true;
     startBtn.disabled = true;
     cancelBtn.disabled = false;
+    restartBtn.disabled = false;
     progressSection.style.display = 'block';
     progressStatus.textContent = `準備下載 ${urls.length} 個任務...`;
     progressPercentage.textContent = '0%';
@@ -190,6 +199,38 @@ async function cancelDownload() {
     console.error('Error cancelling download:', error);
     alert(`取消失敗：${error.message}`);
   }
+}
+
+/**
+ * Restart download process
+ */
+async function restartDownload() {
+  if (!lastDownloadUrl) {
+    alert('沒有可重啟的下載任務');
+    return;
+  }
+
+  console.log('Restarting download...');
+
+  // Cancel current download first
+  try {
+    await fetch('/api/download/cancel', { method: 'POST' });
+  } catch (error) {
+    console.error('Error cancelling before restart:', error);
+  }
+
+  // Wait a bit for cleanup
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  // Disconnect SSE
+  disconnectProgressStream();
+
+  // Restore URL and output dir
+  driveUrlInput.value = lastDownloadUrl;
+  outputDirInput.value = lastOutputDir;
+
+  // Start download again
+  await startDownload();
 }
 
 /**
@@ -380,6 +421,8 @@ function resetUI() {
   isDownloading = false;
   startBtn.disabled = false;
   cancelBtn.disabled = true;
+  // Keep restart button enabled if there's a last download
+  restartBtn.disabled = !lastDownloadUrl;
 }
 
 /**
@@ -501,6 +544,23 @@ async function saveCookies() {
 
     if (data.success) {
       alert(`✅ Cookies 儲存成功！\n\n檔案路徑：${data.path}`);
+
+      // Auto-restart download if there's an active download
+      if (isDownloading && lastDownloadUrl) {
+        const shouldRestart = confirm('是否要重啟下載以使用新的 Cookie？');
+        if (shouldRestart) {
+          // Switch to download tab
+          const downloadTab = document.querySelector('.tab[data-tab="download"]');
+          if (downloadTab) {
+            downloadTab.click();
+          }
+
+          // Wait for tab switch animation
+          setTimeout(() => {
+            restartDownload();
+          }, 300);
+        }
+      }
     } else {
       alert(`❌ 儲存失敗：${data.error}`);
     }
