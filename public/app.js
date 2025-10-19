@@ -234,7 +234,7 @@ async function restartDownload() {
     // Disconnect and reconnect SSE
     disconnectProgressStream();
     await new Promise(resolve => setTimeout(resolve, 500));
-    connectProgressStream();
+    connectToProgressStream();
 
     // Update UI
     progressStatus.textContent = `✅ 已重啟 ${data.count} 個任務`;
