@@ -177,6 +177,27 @@ export class GdownService extends EventEmitter {
 
       let hasUpdate = false;
 
+      // Pattern: Progress bar (e.g., "21%|██▏       | 1.73G/8.09G")
+      // gdown outputs progress bars to stderr, not stdout
+      const barMatch = errorText.match(/(\d+)%\|/);
+      if (barMatch) {
+        const fileProgress = parseInt(barMatch[1], 10);
+
+        // If we see a progress bar, scanning must be complete
+        if (!scanningComplete) {
+          console.log('[gdown] Progress bar detected, marking scanning as complete');
+          scanningComplete = true;
+          hasUpdate = true;
+        }
+
+        // Only update if progress changed
+        if (fileProgress !== lastFileProgress) {
+          lastFileProgress = fileProgress;
+          hasUpdate = true;
+          console.log(`[gdown] File progress: ${fileProgress}%`);
+        }
+      }
+
       // Pattern: "Skipping already downloaded file <path>"
       // This indicates a file was already downloaded and is being skipped
       const skippingMatch = errorText.match(/Skipping already downloaded file\s+(.+)/i);
