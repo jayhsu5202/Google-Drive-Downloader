@@ -2,12 +2,14 @@ import { Router, type Request, type Response } from 'express';
 import { GdownService } from '../services/gdown.js';
 import { scanDirectory } from '../services/fileVerify.js';
 import { TaskManager, type DownloadTask } from '../services/taskManager.js';
+import { ConfigManager } from '../services/configManager.js';
 import type { DownloadProgress } from '../types.js';
 
 const router = Router();
 
 // Global instances
 const taskManager = new TaskManager();
+const configManager = new ConfigManager();
 
 // Store progress for SSE clients
 const progressClients: Response[] = [];
@@ -15,7 +17,6 @@ const progressClients: Response[] = [];
 // Download queue
 const downloadQueue: string[] = [];
 let isProcessingQueue = false;
-let maxConcurrentDownloads = 1; // Default: 1 (sequential)
 const activeDownloads = new Set<string>(); // Track active download task IDs
 const activeServices = new Map<string, GdownService>(); // Track active gdown services by task ID
 
@@ -48,13 +49,13 @@ router.post('/config', (req: Request, res: Response) => {
         res.status(400).json({ error: 'maxConcurrent must be between 1 and 8' });
         return;
       }
-      maxConcurrentDownloads = maxConcurrent;
+      configManager.setMaxConcurrentDownloads(maxConcurrent);
     }
 
     res.json({
       status: 'success',
       config: {
-        maxConcurrentDownloads
+        maxConcurrentDownloads: configManager.getMaxConcurrentDownloads()
       }
     });
   } catch (error) {
@@ -69,7 +70,7 @@ router.post('/config', (req: Request, res: Response) => {
  */
 router.get('/config', (_req: Request, res: Response) => {
   res.json({
-    maxConcurrentDownloads
+    maxConcurrentDownloads: configManager.getMaxConcurrentDownloads()
   });
 });
 
@@ -366,7 +367,8 @@ async function processDownloadQueue(): Promise<void> {
   try {
     while (downloadQueue.length > 0 || activeDownloads.size > 0) {
       // Start new downloads if we have capacity
-      while (downloadQueue.length > 0 && activeDownloads.size < maxConcurrentDownloads) {
+      const maxConcurrent = configManager.getMaxConcurrentDownloads();
+      while (downloadQueue.length > 0 && activeDownloads.size < maxConcurrent) {
         const taskId = downloadQueue.shift();
         if (!taskId) continue;
 
