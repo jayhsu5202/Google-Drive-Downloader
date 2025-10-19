@@ -126,34 +126,7 @@ export class GdownService extends EventEmitter {
         }
       }
 
-      // Pattern 7: "Skipping already downloaded file <path>"
-      const skippingMatch = output.match(/Skipping already downloaded file\s+(.+)/i);
-      if (skippingMatch) {
-        const filePath = skippingMatch[1].trim();
-        const fileName = filePath.split(/[/\\]/).pop() || filePath;
 
-        // Add to file list if not already there
-        if (!fileList.includes(fileName)) {
-          fileList.push(fileName);
-          total = fileList.length;
-        }
-
-        if (fileName !== currentFile) {
-          currentFile = `[已跳過] ${fileName}`;
-          current++;
-          hasUpdate = true;
-        }
-      }
-
-      // Pattern 8: "Download completed" (all files skipped or downloaded)
-      if (output.includes('Download completed')) {
-        console.log('[gdown] Download completed detected, current:', current, 'total:', total);
-        // Ensure current matches total
-        if (total > 0 && current < total) {
-          current = total;
-          hasUpdate = true;
-        }
-      }
 
       // Calculate overall progress
       // Progress = (completed files + current file progress) / total files
@@ -179,14 +152,59 @@ export class GdownService extends EventEmitter {
       }
     });
 
-    // Handle errors
+    // Handle errors and progress info (gdown outputs everything to stderr)
     let errorBuffer = '';
+
     this.process.stderr?.on('data', (data: Buffer) => {
       const errorText = data.toString();
       console.error('[gdown error]', errorText);
 
       // Accumulate error messages
       errorBuffer += errorText;
+
+      let hasUpdate = false;
+
+      // Pattern: "Skipping already downloaded file <path>"
+      const skippingMatch = errorText.match(/Skipping already downloaded file\s+(.+)/i);
+      if (skippingMatch) {
+        const filePath = skippingMatch[1].trim();
+        const fileName = filePath.split(/[/\\]/).pop() || filePath;
+
+        // Add to file list if not already there
+        if (!fileList.includes(fileName)) {
+          fileList.push(fileName);
+          total = fileList.length;
+        }
+
+        if (fileName !== currentFile) {
+          currentFile = `[已跳過] ${fileName}`;
+          current++;
+          hasUpdate = true;
+        }
+      }
+
+      // Pattern: "Download completed"
+      if (errorText.includes('Download completed')) {
+        console.log('[gdown] Download completed detected, current:', current, 'total:', total);
+        // Ensure current matches total
+        if (total > 0 && current < total) {
+          current = total;
+          hasUpdate = true;
+        }
+      }
+
+      // Emit progress update if needed
+      if (hasUpdate) {
+        const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+        const progress: DownloadProgress = {
+          current,
+          total,
+          currentFile,
+          percentage,
+          status: 'downloading'
+        };
+        this.emit('progress', progress);
+      }
 
       // Check for quota/rate limit errors
       if (errorText.includes('Too many users have viewed or downloaded')) {
