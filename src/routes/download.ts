@@ -2,12 +2,11 @@ import { Router, type Request, type Response } from 'express';
 import { GdownService } from '../services/gdown.js';
 import { scanDirectory } from '../services/fileVerify.js';
 import { TaskManager, type DownloadTask } from '../services/taskManager.js';
-import type { DownloadRequest, DownloadProgress } from '../types.js';
+import type { DownloadProgress } from '../types.js';
 
 const router = Router();
 
 // Global instances
-let gdownService: GdownService | null = null;
 const taskManager = new TaskManager();
 
 // Store progress for SSE clients
@@ -18,6 +17,7 @@ const downloadQueue: string[] = [];
 let isProcessingQueue = false;
 let maxConcurrentDownloads = 1; // Default: 1 (sequential)
 const activeDownloads = new Set<string>(); // Track active download task IDs
+const activeServices = new Map<string, GdownService>(); // Track active gdown services by task ID
 
 // Auto-resume pending tasks on startup
 function autoResumeTasks(): void {
@@ -133,83 +133,7 @@ router.post('/batch', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/download/start
- * Start downloading from Google Drive (single URL)
- */
-router.post('/start', (req: Request, res: Response) => {
-  try {
-    const { url, outputDir = './downloads' }: DownloadRequest = req.body;
-
-    if (!url) {
-      res.status(400).json({ error: 'URL is required' });
-      return;
-    }
-
-    // Cancel existing download if any
-    if (gdownService) {
-      gdownService.cancel();
-    }
-
-    // Create new gdown service
-    gdownService = new GdownService();
-
-    // Listen to progress events
-    gdownService.on('progress', (progress: DownloadProgress) => {
-      // Broadcast to all SSE clients
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify(progress)}\n\n`);
-      });
-    });
-
-    // Listen to completion
-    gdownService.on('complete', async () => {
-      // Scan downloaded files
-      const files = await scanDirectory(outputDir);
-
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          status: 'completed',
-          files
-        })}\n\n`);
-      });
-    });
-
-    // Listen to warnings (non-fatal errors like QUOTA_EXCEEDED)
-    gdownService.on('warning', (warning: string) => {
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          type: 'warning',
-          warning
-        })}\n\n`);
-      });
-    });
-
-    // Listen to errors (fatal errors)
-    gdownService.on('error', (error: string) => {
-      progressClients.forEach(client => {
-        client.write(`data: ${JSON.stringify({
-          status: 'error',
-          error
-        })}\n\n`);
-      });
-    });
-
-    // Start download
-    gdownService.downloadFolder(url, outputDir);
-
-    res.json({
-      status: 'started',
-      message: 'Download started successfully'
-    });
-  } catch (error) {
-    console.error('Error starting download:', error);
-    res.status(500).json({
-      error: 'Failed to start download',
-      details: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+// Removed /api/download/start endpoint - use /api/download/batch instead
 
 /**
  * GET /api/download/progress
@@ -240,17 +164,18 @@ router.get('/progress', (req: Request, res: Response) => {
       })}\n\n`);
 
       // Send current progress if available
-      if (gdownService) {
-        const currentProgress = gdownService.getCurrentProgress();
+      const taskService = activeServices.get(currentTask.id);
+      if (taskService) {
+        const currentProgress = taskService.getCurrentProgress();
         if (currentProgress) {
-          // Send full progress information from gdownService
+          // Send full progress information from task's gdownService
           res.write(`data: ${JSON.stringify({
             type: 'progress',
             taskId: currentTask.id,
             progress: currentProgress
           })}\n\n`);
         } else if (currentTask.progress !== undefined) {
-          // Fallback to task progress if gdownService progress not available
+          // Fallback to task progress if service progress not available
           res.write(`data: ${JSON.stringify({
             type: 'progress',
             taskId: currentTask.id,
@@ -264,7 +189,7 @@ router.get('/progress', (req: Request, res: Response) => {
           })}\n\n`);
         }
       } else if (currentTask.progress !== undefined) {
-        // Fallback if no gdownService
+        // Fallback if no active service
         res.write(`data: ${JSON.stringify({
           type: 'progress',
           taskId: currentTask.id,
@@ -294,9 +219,13 @@ router.get('/progress', (req: Request, res: Response) => {
  * Cancel ongoing download
  */
 router.post('/cancel', (_req: Request, res: Response) => {
-  if (gdownService) {
-    gdownService.cancel();
-    gdownService = null;
+  // Cancel all active downloads
+  if (activeServices.size > 0) {
+    activeServices.forEach((service, taskId) => {
+      service.cancel();
+      console.log(`Cancelled task: ${taskId}`);
+    });
+    activeServices.clear();
 
     // Update all downloading tasks to cancelled
     const allTasks = taskManager.getAllTasks();
@@ -312,8 +241,9 @@ router.post('/cancel', (_req: Request, res: Response) => {
     // Reset queue processing flag
     isProcessingQueue = false;
 
-    // Clear download queue to prevent processing remaining tasks
+    // Clear download queue and active downloads to prevent processing remaining tasks
     downloadQueue.length = 0;
+    activeDownloads.clear();
 
     progressClients.forEach(client => {
       client.write(`data: ${JSON.stringify({ status: 'cancelled' })}\n\n`);
@@ -331,11 +261,12 @@ router.post('/cancel', (_req: Request, res: Response) => {
  */
 router.post('/restart', (_req: Request, res: Response) => {
   try {
-    // Cancel current download
-    if (gdownService) {
-      gdownService.cancel();
-      gdownService = null;
-    }
+    // Cancel all active downloads
+    activeServices.forEach((service, taskId) => {
+      service.cancel();
+      console.log(`Cancelled task for restart: ${taskId}`);
+    });
+    activeServices.clear();
 
     // Get all tasks
     const allTasks = taskManager.getAllTasks();
@@ -495,6 +426,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
     // Create new gdown service for this task (each task has its own service)
     const taskGdownService = new GdownService();
 
+    // Add to active services
+    activeServices.set(task.id, taskGdownService);
+
     // Calculate actual output directory (includes folder ID subdirectory)
     const actualOutputDir = `${task.outputDir}/${task.id}`;
 
@@ -537,6 +471,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         })}\n\n`);
       });
 
+      // Remove from active services
+      activeServices.delete(task.id);
+
       resolve();
     });
 
@@ -568,6 +505,9 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
           error
         })}\n\n`);
       });
+
+      // Remove from active services
+      activeServices.delete(task.id);
 
       resolve();
     });
