@@ -16,9 +16,13 @@ const TASKS_FILE = './tasks.json';
 
 export class TaskManager {
   private tasks: Map<string, DownloadTask> = new Map();
+  private saveTimer: NodeJS.Timeout | null = null;
+  private needsSave: boolean = false;
 
   constructor() {
     this.loadTasks();
+    // Auto-save every 5 seconds if there are unsaved changes
+    this.startAutoSave();
   }
 
   /**
@@ -40,6 +44,18 @@ export class TaskManager {
   }
 
   /**
+   * Start auto-save timer
+   */
+  private startAutoSave(): void {
+    this.saveTimer = setInterval(() => {
+      if (this.needsSave) {
+        this.saveTasks();
+        this.needsSave = false;
+      }
+    }, 5000); // Save every 5 seconds if needed
+  }
+
+  /**
    * Save tasks to file
    */
   private saveTasks(): void {
@@ -48,6 +64,28 @@ export class TaskManager {
       fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksArray, null, 2));
     } catch (error) {
       console.error('Error saving tasks:', error);
+    }
+  }
+
+  /**
+   * Force save tasks immediately
+   */
+  public forceSave(): void {
+    this.saveTasks();
+    this.needsSave = false;
+  }
+
+  /**
+   * Cleanup resources
+   */
+  public cleanup(): void {
+    if (this.saveTimer) {
+      clearInterval(this.saveTimer);
+      this.saveTimer = null;
+    }
+    // Save any pending changes
+    if (this.needsSave) {
+      this.saveTasks();
     }
   }
 
@@ -72,12 +110,20 @@ export class TaskManager {
 
   /**
    * Update task status
+   * @param saveToFile - Whether to save to file immediately (default: true for status changes, false for progress updates)
    */
-  updateTask(id: string, updates: Partial<DownloadTask>): void {
+  updateTask(id: string, updates: Partial<DownloadTask>, saveToFile: boolean = true): void {
     const task = this.tasks.get(id);
     if (task) {
       Object.assign(task, updates);
-      this.saveTasks();
+
+      // Only save to file if explicitly requested or if status changed
+      if (saveToFile || updates.status !== undefined) {
+        this.saveTasks();
+      } else {
+        // Mark as needing save (will be saved by auto-save timer)
+        this.needsSave = true;
+      }
     }
   }
 

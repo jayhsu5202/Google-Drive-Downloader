@@ -326,11 +326,11 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
 
     // Listen to progress events
     gdownService.on('progress', (progress: DownloadProgress) => {
-      // Update task
+      // Update task (don't save to file for every progress update)
       taskManager.updateTask(task.id, {
         progress: progress.percentage,
         currentFile: progress.currentFile
-      });
+      }, false);
 
       // Broadcast to all SSE clients
       progressClients.forEach(client => {
