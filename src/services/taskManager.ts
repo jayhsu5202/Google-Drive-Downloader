@@ -80,9 +80,11 @@ export class TaskManager {
         task.status === 'error'
       );
 
+      console.log(`[TaskManager] Saving ${tasksToSave.length} tasks to file (${this.tasks.size} total in memory)`);
       fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksToSave, null, 2));
+      console.log(`[TaskManager] Tasks saved successfully to ${TASKS_FILE}`);
     } catch (error) {
-      console.error('Error saving tasks:', error);
+      console.error('[TaskManager] Error saving tasks:', error);
     }
   }
 
@@ -134,6 +136,7 @@ export class TaskManager {
   updateTask(id: string, updates: Partial<DownloadTask>, saveToFile: boolean = true): void {
     const task = this.tasks.get(id);
     if (task) {
+      console.log(`[TaskManager] Updating task ${id}, status: ${updates.status || task.status}`);
       Object.assign(task, updates);
 
       // Delete error field if it's explicitly set to undefined
@@ -144,9 +147,11 @@ export class TaskManager {
       // Auto-cleanup: Remove completed or cancelled tasks from memory
       // They won't be saved to file anyway, so no need to keep them in memory
       if (task.status === 'completed' || task.status === 'cancelled') {
-        console.log(`Auto-removing ${task.status} task ${id} from memory`);
+        console.log(`[TaskManager] Auto-removing ${task.status} task ${id} from memory`);
         this.tasks.delete(id);
+        console.log(`[TaskManager] Calling saveTasks() to update file...`);
         this.saveTasks(); // Save to update the file
+        console.log(`[TaskManager] saveTasks() completed for task ${id}`);
         return;
       }
 
@@ -157,6 +162,8 @@ export class TaskManager {
         // Mark as needing save (will be saved by auto-save timer)
         this.needsSave = true;
       }
+    } else {
+      console.log(`[TaskManager] Task ${id} not found in memory`);
     }
   }
 

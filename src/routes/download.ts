@@ -452,6 +452,8 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
 
     // Listen to completion
     taskGdownService.on('complete', async () => {
+      console.log(`[downloadTask] Task ${task.id} completed, updating status...`);
+
       // Scan downloaded files from the actual output directory
       const files = await scanDirectory(actualOutputDir);
 
@@ -461,6 +463,8 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         progress: 100,
         completedAt: Date.now()
       });
+
+      console.log(`[downloadTask] Task ${task.id} status updated to completed`);
 
       progressClients.forEach(client => {
         client.write(`data: ${JSON.stringify({
@@ -473,6 +477,8 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
 
       // Remove from active services
       activeServices.delete(task.id);
+
+      console.log(`[downloadTask] Task ${task.id} removed from active services`);
 
       resolve();
     });
