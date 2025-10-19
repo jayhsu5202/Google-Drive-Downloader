@@ -173,7 +173,11 @@ function connectToProgressStream() {
 
   eventSource.onerror = (error) => {
     console.error('SSE error:', error);
-    disconnectProgressStream();
+    // Don't disconnect immediately - SSE will auto-reconnect
+    // Only disconnect if user is not downloading
+    if (!isDownloading) {
+      disconnectProgressStream();
+    }
   };
 }
 
@@ -209,29 +213,78 @@ function updateProgress(data) {
  * Handle download completion
  */
 function handleDownloadComplete(data) {
-  progressStatus.textContent = '✅ 下載完成！';
-  progressPercentage.textContent = '100%';
-  progressFill.style.width = '100%';
+  console.log('Download complete:', data);
 
-  // Update file list
-  if (data.files && data.files.length > 0) {
-    displayFiles(data.files);
+  // For batch downloads, check if there are more tasks
+  if (data.taskId) {
+    progressStatus.textContent = `✅ 任務 ${data.taskId} 完成`;
+    // Update file list
+    if (data.files && data.files.length > 0) {
+      displayFiles(data.files);
+    }
+    // Don't disconnect - other tasks may still be downloading
+    // Check if all tasks are done
+    checkIfAllTasksComplete();
   } else {
-    loadFiles();
-  }
+    // Single download complete
+    progressStatus.textContent = '✅ 下載完成！';
+    progressPercentage.textContent = '100%';
+    progressFill.style.width = '100%';
 
-  disconnectProgressStream();
-  resetUI();
+    // Update file list
+    if (data.files && data.files.length > 0) {
+      displayFiles(data.files);
+    } else {
+      loadFiles();
+    }
+
+    disconnectProgressStream();
+    resetUI();
+  }
+}
+
+/**
+ * Check if all tasks are complete
+ */
+async function checkIfAllTasksComplete() {
+  try {
+    const response = await fetch('/api/download/status');
+    const data = await response.json();
+
+    if (!data.isDownloading && data.pendingTasks.length === 0) {
+      // All tasks complete
+      progressStatus.textContent = '✅ 所有任務完成！';
+      progressPercentage.textContent = '100%';
+      progressFill.style.width = '100%';
+
+      setTimeout(() => {
+        disconnectProgressStream();
+        resetUI();
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Error checking task status:', error);
+  }
 }
 
 /**
  * Handle download error
  */
 function handleDownloadError(data) {
-  progressStatus.textContent = '❌ 下載失敗';
-  alert(`下載錯誤：${data.error || '未知錯誤'}`);
-  disconnectProgressStream();
-  resetUI();
+  console.error('Download error:', data);
+
+  // For batch downloads, show error but don't stop
+  if (data.taskId) {
+    progressStatus.textContent = `⚠️ 任務 ${data.taskId} 失敗：${data.error || '未知錯誤'}`;
+    // Don't disconnect - other tasks may still be downloading
+    // Don't reset UI - keep showing progress
+  } else {
+    // Single download error
+    progressStatus.textContent = '❌ 下載失敗';
+    alert(`下載錯誤：${data.error || '未知錯誤'}`);
+    disconnectProgressStream();
+    resetUI();
+  }
 }
 
 /**
