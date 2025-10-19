@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Drive Downloader 🐾</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd@5.22.0/dist/reset.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <h1>🐾 Google Drive Downloader</h1>
+      <p class="subtitle">使用 gdown 下載 Google Drive 資料夾，支援進度追蹤與檔案校驗</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+      <!-- Download Form -->
+      <section class="card">
+        <h2>下載設定</h2>
+        <div class="form-group">
+          <label for="driveUrl">Google Drive 連結或資料夾 ID</label>
+          <input 
+            type="text" 
+            id="driveUrl" 
+            class="input" 
+            placeholder="https://drive.google.com/drive/folders/..."
+          >
+        </div>
+        <div class="form-group">
+          <label for="outputDir">輸出目錄（選填）</label>
+          <input 
+            type="text" 
+            id="outputDir" 
+            class="input" 
+            placeholder="./downloads"
+            value="./downloads"
+          >
+        </div>
+        <div class="button-group">
+          <button id="startBtn" class="btn btn-primary">開始下載</button>
+          <button id="cancelBtn" class="btn btn-secondary" disabled>取消下載</button>
+        </div>
+      </section>
+
+      <!-- Progress Tracker -->
+      <section class="card" id="progressSection" style="display: none;">
+        <h2>下載進度</h2>
+        <div class="progress-info">
+          <div class="progress-text">
+            <span id="progressStatus">準備中...</span>
+            <span id="progressPercentage">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <div class="progress-details">
+            <span id="currentFile">-</span>
+            <span id="fileCount">0 / 0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- File List -->
+      <section class="card">
+        <h2>已下載檔案</h2>
+        <div id="fileList" class="file-list">
+          <p class="empty-message">尚無下載檔案</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Powered by gdown CLI | Made with ❤️ by Claude 4.0 Sonnet</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
