@@ -102,6 +102,14 @@ export class GdownService extends EventEmitter {
       if (barMatch) {
         const fileProgress = parseInt(barMatch[1], 10);
 
+        // If we see a progress bar, scanning must be complete
+        // (gdown might not output "Building directory structure completed" for small folders)
+        if (!scanningComplete) {
+          console.log('[gdown] Progress bar detected, marking scanning as complete');
+          scanningComplete = true;
+          hasUpdate = true;
+        }
+
         // Only update if progress changed
         if (fileProgress !== lastFileProgress) {
           lastFileProgress = fileProgress;
