@@ -433,11 +433,8 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
     });
 
     // Listen to completion
-    taskGdownService.on('complete', async () => {
+    taskGdownService.on('complete', () => {
       console.log(`[downloadTask] Task ${task.id} completed, updating status...`);
-
-      // Scan downloaded files from the actual output directory
-      const files = await scanDirectory(actualOutputDir);
 
       // Update task
       taskManager.updateTask(task.id, {
@@ -452,8 +449,7 @@ function downloadTask(task: { id: string; url: string; outputDir: string }): Pro
         client.write(`data: ${JSON.stringify({
           type: 'task_complete',
           taskId: task.id,
-          outputDir: actualOutputDir,
-          files
+          outputDir: actualOutputDir
         })}\n\n`);
       });
 
