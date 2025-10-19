@@ -236,6 +236,13 @@ export class GdownService extends EventEmitter {
 
     // Handle completion
     this.process.on('close', (code: number | null) => {
+      // If exit code is null, process was killed (cancelled)
+      // Don't emit complete or error - just stop
+      if (code === null) {
+        console.log('[gdown] Process was cancelled');
+        return;
+      }
+
       // Check if all files were downloaded successfully
       const allFilesDownloaded = total > 0 && current === total;
 
